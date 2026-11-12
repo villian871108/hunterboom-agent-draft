@@ -150,7 +150,7 @@ function home(){
   '<p>这是给老板看的草稿，入口可在顶部黑条随时切换。数据来自 2026 价目表（253 款），订单只存在这台浏览器（localStorage），不连真实系统。</p>'+
   '<div class="rc">'+
   '<a href="#/master"><span class="e">📊</span><b>总盘（永）</b>给老板看的是统计、订单、代理名单。<ul><li>统计：总销售、未付款 / 已付款、出货状态、抽成，可按代理分</li><li>订单：确认有货、安排出货；秘书记录收款金额和方式</li><li>代理名单：开下线、设定抽成和默认利润率、最低利润</li><li>完整价目表放在内部查阅，不放主菜单，以免扰乱老板</li></ul></a>'+
-  '<a href="#/agent"><span class="e">🧾</span><b>① 代理自己订货</b>登录用户名：<b style="display:inline;font-size:15px">阿伟0901a</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">a</b></li><li>完整产品资料，看本钱价 / 建议售价 / 利润</li><li>向总盘下单；「我的订单」交帐：列出抽成和要收余额</li></ul></a>'+
+  '<a href="#/agent"><span class="e">🧾</span><b>① 代理自己订货</b>登录用户名：<b style="display:inline;font-size:15px">阿伟0901a</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">a</b></li><li>完整产品资料，看本钱价 / 建议售价 / 利润</li><li>向总盘下单；底部「账户详情」可看进货、卖出和还欠公司</li></ul></a>'+
   '<a href="#/a/阿伟0901"><span class="e">🛍️</span><b>② 顾客下单链接</b>链接：<b style="display:inline;font-size:15px">/a/阿伟0901</b>（没有 a）<ul><li>只显示卖价，看不到总盘、进价、抽成</li><li>顾客登录填 姓名 + 完整电话号码</li><li>下单必填 姓名、完整电话、收货地址，并可选整盒或散装，单挂在阿伟名下</li></ul></a>'+
   '<a href="#/cs"><span class="e">👩‍💼</span><b>③ 客服（秘书）</b>登录用户名：<b style="display:inline;font-size:15px">小芳0001s</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">s</b>，由总盘开通</li><li>单独入口，只处理代理总单（自己订货）：确定货、安排出货、记收款</li><li>看不到开下线、改抽成和价目表</li></ul></a>'+
   '</div><div class="rule"><b>价钱规则（按你定的）：</b> 代理进价 = 总盘 × 1.25；卖价 = 代理进价 × 1.40；抽成 = 卖价 − 代理进价（即进价的 40%）。散装：只有包装 N/1 才算，总盘单件 = 箱价 ÷ N，再按同样规则；其他包装散装留空。金额四舍五入到 RM0.01。<br>例：HB001 8尺红炮（40/1）总盘 RM200 → 进价 RM250 · 卖价 RM350 · 抽成 RM100；散装 进价 RM6.25 · 卖价 RM8.75 · 抽成 RM2.50。</div>'+
@@ -454,6 +454,7 @@ function agent(p,q){
   if(!s||p[0]==='login')return agentLogin();
   var A=agentByAcct(s.acct);if(!A){del('sess.agent');return agentLogin()}
   if(p[0]==='rate'){location.replace('#/agent');return}
+  if(p[0]==='account'){location.replace('#/agent/orders');return}
   load('agent').then(function(D0){var D=withRate(D0,A);AG={A:A,D:D};
     var base='#/agent',ck='cart.agent.'+A.acct,cats=liveCats(D),cur=p[0]==='c'?p[1]:'';
     var page=p[0]||'';
@@ -464,9 +465,10 @@ function agent(p,q){
     else if(page==='cart')html+=agentCart(D,A,ck);
     else if(page==='orders')html+=agentOrders(D,A,q.get('f')||'all');
     else if(page==='link')html+=agentLink(A);
-    else if(page==='done')html+='<div class="cp thx"><div class="e">✅</div><h1>已提交给总盘（客服）</h1><p>订单 <b>'+esc(p[1])+'</b> 状态：<span class="st s0">'+ST0A+'</span><br>客服人工确认有货后安排出货。</p><p><a class="btn gd" href="#/agent/orders">看我的订单</a> <a class="btn ol" href="#/agent">继续订货</a></p></div>';
+    else if(page==='done')html+='<div class="cp thx"><div class="e">✅</div><h1>已提交给总盘（客服）</h1><p>订单 <b>'+esc(p[1])+'</b> 状态：<span class="st s0">'+ST0A+'</span><br>客服人工确认有货后安排出货。</p><p><a class="btn gd" href="#/agent/orders">看账户详情</a> <a class="btn ol" href="#/agent">继续订货</a></p></div>';
     else html+=agentHome(D,A,cur,q.get('q'));
-    html+='</main>'+bottomNav([{h:base,t:'订货',ic:IC.home,on:!page||page==='c'||page==='p'},{h:base+'/cart',t:'订货车',ic:IC.cart,on:page==='cart',b:cartCount(get(ck,[]))||''},{h:base+'/orders',t:'我的订单',ic:IC.ord,on:page==='orders'},{h:base+'/link',t:'顾客链接',ic:IC.link,on:page==='link'}]);
+    var nPend=orders().filter(function(o){return (o.shop===A.shop||o.agentAcct===A.acct)&&pendingCust(o)}).length;
+    html+='</main>'+bottomNav([{h:base,t:'订货',ic:IC.home,on:!page||page==='c'||page==='p'},{h:base+'/cart',t:'订货车',ic:IC.cart,on:page==='cart',b:cartCount(get(ck,[]))||''},{h:base+'/orders',t:'账户详情',ic:IC.ord,on:page==='orders'||page==='account',b:nPend||''},{h:base+'/link',t:'顾客链接',ic:IC.link,on:page==='link'}]);
     app.innerHTML=html;bindSearch(base);bindQty(app,page==='cart'?function(i){var c=get(ck,[]);c[+i.getAttribute('data-i')].qty=+i.value;set(ck,c);route()}:null);
     var lo=document.getElementById('lo');if(lo)lo.onclick=function(e){e.preventDefault();del('sess.agent');route()};
     [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入 ×'+qq);route()}});
@@ -525,8 +527,7 @@ function agentCard(x,base){var qid='aq-'+x.sku;return '<article class="pc"><a cl
 function agentStats(D,A){var my=orders().filter(function(o){return o.shop===A.shop}),r={own:0,cu:0,a:0,s:0,k:0};my.forEach(function(o){var t=orderTotals(o,D);if(o.kind==='agent'){r.own++;r.a+=t.a}else{r.cu++;r.k+=t.k;r.s+=t.s}});return r}
 function agentHome(D,A,cur,q){
   var list=filterItems(D,cur,q),h='';
-  if(!cur&&!q){var myAll=orders().filter(function(o){return o.shop===A.shop||o.agentAcct===A.acct}),T=totalsOf(myAll,D),nPend=myAll.filter(pendingCust).length,st=agentStats(D,A);h+='<section class="hero ag"><span class="tag">① 代理自己订货 · 草稿</span><h1>你好，'+esc(A.name)+'。向总盘订货，<em>本钱价 · 建议售价 · 利润</em> 一目了然</h1><p>利润 = 建议售价 − 本钱价。点建议售价可直接改，顾客店跟着变。</p>'+(nPend?'<p class="pendn"><a href="#/agent/orders">有 '+nPend+' 张散单待对</a></p>':'')+'<div class="kv"><span>自己订货 <b>'+st.own+'</b> 单</span><span>顾客下单 <b>'+st.cu+'</b> 单</span></div><div class="btns" style="margin-top:12px"><a class="btn gd" href="#/agent/orders">交帐给总盘</a><a class="btn ol" href="#/agent/link">② 顾客下单链接</a></div></section>'+
-    '<section class="adet" id="adet"><div class="acch"><h2>账号详情</h2><span><a href="#/agent/orders">看交帐 ›</a></span></div>'+askBox(T,{compact:1,link:'#/agent/orders'})+'</section>'}
+  if(!cur&&!q){var myAll=orders().filter(function(o){return o.shop===A.shop||o.agentAcct===A.acct}),nPend=myAll.filter(pendingCust).length,st=agentStats(D,A);h+='<section class="hero ag"><span class="tag">① 代理自己订货 · 草稿</span><h1>你好，'+esc(A.name)+'。向总盘订货，<em>本钱价 · 建议售价 · 利润</em> 一目了然</h1><p>利润 = 建议售价 − 本钱价。点建议售价可直接改，顾客店跟着变。</p>'+(nPend?'<p class="pendn"><a href="#/agent/orders">有 '+nPend+' 张散单待对</a></p>':'')+'<div class="kv"><span>自己订货 <b>'+st.own+'</b> 单</span><span>顾客下单 <b>'+st.cu+'</b> 单</span></div><div class="btns" style="margin-top:12px"><a class="btn gd" href="#/agent/orders">交帐给总盘</a><a class="btn ol" href="#/agent/link">② 顾客下单链接</a></div></section>'}
   h+=rateBar(A)+'<section class="sec"><h2>'+(q?'搜索「'+esc(q)+'」':cur?esc(catName(D,cur)):'全部产品')+' <small>'+list.length+' 款'+(cur||q?'':' ')+'</small></h2>';
   return h+(list.length?'<div class="g">'+list.map(function(x){return agentCard(x,'#/agent')}).join('')+'</div>':'<div class="empty">没有找到产品</div>')+'</section>';
 }
@@ -558,7 +559,7 @@ function agentOrders(D,A,f){
   function src(lab,r){return '<div class="setrow"><b>'+lab+'</b><span>'+r.n+' 单</span><span class="k">抽成 '+rmSum(r.k,r.missK)+'</span><span class="w">要收 '+rmSum(r.bal,r.missB)+'</span></div>'}
   var bar='<div class="aper"><button type="button" data-ap="all" class="'+(period==='all'?'on':'')+'">全部</button><button type="button" data-ap="month" class="'+(period==='month'?'on':'')+'">本月（'+monthLabel(month)+'）</button><span>含自己订货和顾客散单</span></div>';
   var pendH=pend.length?'<div class="pend"><div class="acch"><h2>待对散单</h2><span>'+pend.length+' 张顾客下单，开了单后由你对</span></div>'+pend.map(function(o){return orderCard(o,'agent',D)}).join('')+'</div>':'';
-  return '<div class="cp settle"><h1>交帐给总盘</h1>'+bar+'<div class="adet"><h2>账号详情</h2>'+askBox(ra)+'</div>'+
+  return '<div class="cp settle"><h1>账户详情</h1><p class="setsub">交帐给总盘</p>'+bar+askBox(ra)+
   src('自己订货',ro)+src('顾客下单',rc)+
   '<p class="setsub">已交 '+rm(ra.paid)+' · 还欠公司是欠总盘的进价余额，不是抽成。有缺会标明，不把缺当 0。</p>'+
   '<p class="crline">赊账 '+creditTxt(cr)+'</p>'+
