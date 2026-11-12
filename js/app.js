@@ -146,8 +146,9 @@ function master(tab,sel){
   document.body.className='mst nobn';
   load('master').then(function(D){
     var os=orders(),pend=os.filter(function(o){return o.status!==ST2}).length,unp=os.filter(function(o){return !isPaid(o,D)}).length;
-    var head='<header class="mh"><div class="in"><h1>Hunter BOOM JOHOR 总盘<small>永 · 只看数据 · 草稿</small></h1><nav><a href="#/master" class="'+(tab==='stats'?'on':'')+'">统计</a><a href="#/master/orders" class="'+(tab==='orders'?'on':'')+'">订单'+(unp||pend?'（'+(unp?'未付款 '+unp+(pend?' · ':''):'')+(pend?'未出货 '+pend:'')+'）':'')+'</a><a href="#/master/agents" class="'+(tab==='agents'?'on':'')+'">代理名单</a></nav></div></header>';
+    var head='<header class="mh"><div class="in"><h1>Hunter BOOM JOHOR 总盘<small>永 · 只看数据 · 草稿</small></h1><nav><a href="#/master" class="'+(tab==='stats'||tab==='unpaid'?'on':'')+'">统计</a><a href="#/master/orders" class="'+(tab==='orders'?'on':'')+'">订单'+(unp||pend?'（'+(unp?'未付款 '+unp+(pend?' · ':''):'')+(pend?'未出货 '+pend:'')+'）':'')+'</a><a href="#/master/agents" class="'+(tab==='agents'?'on':'')+'">代理名单</a></nav></div></header>';
     if(tab==='stats')return masterStats(D,head);
+    if(tab==='unpaid')return masterUnpaid(D,head);
     if(tab==='orders')return masterOrders(D,head,false,sel);
     if(tab==='agents')return masterAgents(head);
     var it=D.items.filter(function(x){return x.live}),ready=it.filter(function(x){return x.n}).length;
@@ -177,13 +178,15 @@ function masterStats(D,head){
   var confL=os.filter(function(o){return o.status===ST1});
   var shipL=os.filter(function(o){return o.status===ST2});
   var T=totalsOf(os,D),U=totalsOf(unpaidL,D),P=totalsOf(paidL,D),W=totalsOf(waitL,D),C=totalsOf(confL,D),S=totalsOf(shipL,D);
-  function card(cls,title,money,miss,n,sub){
-    return '<div class="'+(cls||'')+'"><b>'+rmSum(money,miss)+'</b>'+title+'<i>'+(n!=null?n+' 笔':'')+(n!=null&&sub?' · ':'')+(sub||'')+'</i></div>';
+  function card(cls,title,money,miss,n,sub,href,hint){
+    var inner='<b>'+rmSum(money,miss)+'</b>'+title+'<i>'+(n!=null?n+' 笔':'')+(n!=null&&sub?' · ':'')+(sub||'')+'</i>'+(hint?'<i class="go">'+hint+'</i>':'');
+    if(href)return '<a class="'+(cls||'')+'" href="'+href+'">'+inner+'</a>';
+    return '<div class="'+(cls||'')+'">'+inner+'</div>';
   }
   var kpi='<div class="kp sale">'+
     card('hi','总销售（卖价）',T.s,T.missS,T.n,'顾客单 + 代理自己订货')+
     card('','总盘应收（进价）',T.a,T.missA,T.n,'代理应付给总盘')+
-    card('w','未付款（要收余额）',T.bal,T.missB,U.n,'总盘还未收的进价')+
+    card('w','未付款（要收余额）',T.bal,T.missB,U.n,'总盘还未收的进价','#/master/unpaid','点进去看哪个代理还没还钱 ›')+
     card('ok','已收款',T.paid,T.missB,P.n,'秘书已记的收款')+
     card('k','抽成合计',T.k,T.missK,null,'卖价 − 进价，代理应得')+
     card('','待确认',W.s,W.missS,W.n,'卖价')+
@@ -202,6 +205,32 @@ function masterStats(D,head){
     '<h2 class="sh">按代理分</h2><div class="tw" style="max-height:none"><table class="dt at"><thead><tr><th>代理</th><th class="r">笔数</th><th class="r">总销售（卖价）</th><th class="r">总盘应收（进价）</th><th class="r">要收余额</th><th class="r">已收款</th><th class="r">抽成</th></tr></thead><tbody>'+
     (arows||'<tr><td colspan="7" class="muted">还没有代理订单</td></tr>')+'</tbody></table></div>'+
     '<p class="ms-note"><b>口径：</b>总销售 = 订单卖价合计（顾客下单 + 代理自己订货）。总盘应收 = 进价合计（代理应付总盘）。已收款 = 秘书记下的实收金额。要收余额 = 进价 − 已收。抽成 = 卖价 − 进价。可记部分付款。某行缺数据会标「有缺」，不把缺失当 0。暂无取消、退货。</p>'+masterFoot('stats')+'</main>';
+  [].forEach.call(app.querySelectorAll('[data-p]'),function(b){b.onclick=function(){set('ms.period',b.getAttribute('data-p'));route()}});
+}
+function masterUnpaid(D,head){
+  var period=get('ms.period','all'), month=thisMonthKL();
+  var os=orders().filter(function(o){return period!=='month'||ymKL(o.time)===month});
+  var by={},keys=[];
+  os.forEach(function(o){var k=orderKey(o);if(!by[k]){var A=agentByAcct(k);by[k]={name:A?A.name:(o.shop||k.replace(/^\?/,'')),acct:k,gone:!A,list:[]};keys.push(k)}by[k].list.push(o)});
+  var rows=keys.map(function(k){var g=by[k],t=totalsOf(g.list,D);
+    var isP=function(o){return isPaid(o,D)};
+    var pp=g.list.filter(isP).length,pt=g.list.filter(function(o){return !isP(o)&&settleOf(o,D).paid>0}).length,pu=g.list.length-pp-pt;
+    return {g:g,t:t,pu:pu,pt:pt,unp:pu+pt};
+  }).filter(function(r){return r.t.missB||r.t.bal>0}).sort(function(a,b){
+    if(a.t.missB&&!b.t.missB)return 1;if(!a.t.missB&&b.t.missB)return -1;return (b.t.bal||0)-(a.t.bal||0);
+  });
+  var totBal=0,totMiss=0,totUnp=0;
+  rows.forEach(function(r){if(r.t.missB)totMiss++;else totBal+=r.t.bal;totUnp+=r.unp});
+  var cards=rows.map(function(r){var g=r.g,t=r.t;
+    return '<a class="acct debt" href="#/master/orders/'+encodeURIComponent(g.acct)+'"><div class="an"><b>'+esc(g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在名单':'')+'</small><span class="ac w">要收余额 '+rmSum(t.bal,t.missB)+' ›</span></div>'+
+      '<div class="am bal"><span class="w">要收余额<b>'+rmSum(t.bal,t.missB)+'</b></span><span>进价（应收）<b>'+rmSum(t.a,t.missA)+'</b></span><span>已收<b>'+rm(t.paid)+'</b></span></div>'+
+      '<div class="cn"><span class="x">未付款 '+r.unp+' 笔</span>'+(r.pt?'<span class="x">部分付款 '+r.pt+'</span>':'')+'</div></a>';
+  }).join('');
+  var empty=rows.length?'':'<div class="oc empty">这个范围内没有还没还钱的代理。</div>';
+  var sum=rows.length?('<p class="unpaid-sum">共 '+rows.length+' 个代理还没还钱 · 未付款 '+totUnp+' 笔 · 要收余额合计 <b>'+rmSum(totBal,totMiss)+'</b></p>'):'';
+  app.innerHTML=head+'<main class="mw"><a class="back" href="#/master">‹ 返回统计</a><div class="fl"><strong style="font-size:15px">还没还钱的代理</strong><button type="button" data-p="all" style="'+(period==='all'?'background:#222;color:#fff':'')+'">全部</button><button type="button" data-p="month" style="'+(period==='month'?'background:#222;color:#fff':'')+'">本月（'+monthLabel(month)+'）</button><span class="n">要收余额 = 进价 − 已收（总盘还未收到的钱）。可记部分付款。有缺标「有缺」，不把缺当 0。</span></div>'+
+    sum+(cards||empty)+
+    (hasDemoOrders(os)?'<p class="ms-note">以上是示例，不是真实生意。</p>':'')+masterFoot('stats')+'</main>';
   [].forEach.call(app.querySelectorAll('[data-p]'),function(b){b.onclick=function(){set('ms.period',b.getAttribute('data-p'));route()}});
 }
 function masterAgents(head){

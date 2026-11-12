@@ -39,7 +39,10 @@ body.mst{background:#f6eee4;color:#222}
 .mw{max-width:1400px;margin:0 auto;padding:12px 14px 30px}
 .kp{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 12px}
 @media(min-width:760px){.kp{grid-template-columns:repeat(6,1fr)}}
-.kp div{background:#fff;border:1px solid #ead8c8;border-radius:10px;padding:9px 12px;font-size:12px;color:#777}
+.kp > *{background:#fff;border:1px solid #ead8c8;border-radius:10px;padding:9px 12px;font-size:12px;color:#777}
+.kp a{text-decoration:none;color:inherit;cursor:pointer;display:block}
+.kp a:hover,.kp a:active{border-color:#d4a017;background:#fffaf2}
+.kp a i.go{color:#875a16;font-weight:700;margin-top:4px}
 .kp b{display:block;font-size:21px;color:#222;font-variant-numeric:tabular-nums}
 .kp .w b{color:#875a16}.kp .x b{color:#888}
 .fl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;align-items:center}
@@ -189,6 +192,13 @@ body.mst .oc{border-color:#ead8c8;border-radius:10px}
 .sh{font-size:15px;margin:16px 0 8px;color:#2a1614}
 .at td small{font-weight:500}
 
+
+.kp a.w:hover,.kp a.w:active{box-shadow:0 0 0 1px #d4a017 inset}
+.unpaid-sum{font-size:14px;color:#2a1614;margin:0 0 12px;font-weight:600}
+.unpaid-sum b{color:#875a16;font-variant-numeric:tabular-nums}
+.acct .an .ac.w{color:#875a16}
+.acct.debt .am.bal{grid-template-columns:1.3fr 1fr 1fr}
+.acct.debt .am.bal .w b{font-size:20px}
 /* 价目表不在老板主菜单，只在页脚内部查阅 */
 .mf{font-size:12px;color:#8a96a8;margin:18px 2px 6px;text-align:right}
 .mf a{color:#7a5a50;text-decoration:underline;text-underline-offset:2px}
