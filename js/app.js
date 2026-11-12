@@ -89,8 +89,8 @@ function route(){
   var r=parts(),p=r.p;document.body.className='';
   window.scrollTo(0,0);
   if(!p.length){markPv('home');return home()}
-  if(p[0]==='master'){markPv('master');return master(p[1]||'stats')}
-  if(p[0]==='cs'){markPv('cs');return staffApp()}
+  if(p[0]==='master'){markPv('master');return master(p[1]||'stats',p[2])}
+  if(p[0]==='cs'){markPv('cs');return staffApp(p[1])}
   if(p[0]==='agent'){markPv('agent');return agent(p.slice(1),r.q)}
   if(p[0]==='a'&&p[1]){markPv('shop');return shop(p[1],p.slice(2),r.q)}
   app.innerHTML='<div class="empty">找不到页面。<a href="#/">回说明页</a></div>';
@@ -115,13 +115,13 @@ function masterFoot(tab){
   if(tab==='data')return '<p class="mf">此页是内部价目查阅，不放在老板主菜单。<a href="#/master">返回统计</a></p>';
   return '<p class="mf"><a href="#/master/data">价目表（内部查阅）</a></p>';
 }
-function master(tab){
+function master(tab,sel){
   document.body.className='mst nobn';
   load('master').then(function(D){
     var os=orders(),pend=os.filter(function(o){return o.status!==ST2}).length,unp=os.filter(function(o){return !isPaid(o,D)}).length;
     var head='<header class="mh"><div class="in"><h1>Hunter BOOM JOHOR 总盘<small>永 · 只看数据 · 草稿</small></h1><nav><a href="#/master" class="'+(tab==='stats'?'on':'')+'">统计</a><a href="#/master/orders" class="'+(tab==='orders'?'on':'')+'">订单'+(unp||pend?'（'+(unp?'未付款 '+unp+(pend?' · ':''):'')+(pend?'未出货 '+pend:'')+'）':'')+'</a><a href="#/master/agents" class="'+(tab==='agents'?'on':'')+'">代理名单</a></nav></div></header>';
     if(tab==='stats')return masterStats(D,head);
-    if(tab==='orders')return masterOrders(D,head);
+    if(tab==='orders')return masterOrders(D,head,false,sel);
     if(tab==='agents')return masterAgents(head);
     var it=D.items.filter(function(x){return x.live}),ready=it.filter(function(x){return x.n}).length;
     var cat={};D.cats.forEach(function(c){cat[c.id]=c.name});
@@ -167,7 +167,7 @@ function masterStats(D,head){
   agents().forEach(function(a){by[a.acct]={name:a.name,acct:a.acct,shop:a.shop,list:[]};keys.push(a.acct)});
   os.forEach(function(o){var k=o.agentAcct||('?'+(o.shop||'未记代理'));if(!by[k]){by[k]={name:o.shop||k,acct:k,shop:o.shop||'',list:[]};keys.push(k)}by[k].list.push(o)});
   var arows=keys.map(function(k){var g=by[k],tg=totalsOf(g.list,D);
-    return '<tr><td>'+esc(g.name)+'<br><small class="muted">'+esc(g.acct)+'</small></td><td class="r">'+tg.n+'</td><td class="r">'+rmSum(tg.s,tg.missS)+'</td><td class="r">'+rmSum(tg.a,tg.missA)+'</td><td class="r w">'+rmSum(tg.bal,tg.missB)+'</td><td class="r">'+rm(tg.paid)+'</td><td class="r k">'+rmSum(tg.k,tg.missK)+'</td></tr>';
+    return '<tr><td><a href="#/master/orders/'+encodeURIComponent(k)+'">'+esc(g.name)+'</a><br><small class="muted">'+esc(g.acct)+'</small></td><td class="r">'+tg.n+'</td><td class="r">'+rmSum(tg.s,tg.missS)+'</td><td class="r">'+rmSum(tg.a,tg.missA)+'</td><td class="r w">'+rmSum(tg.bal,tg.missB)+'</td><td class="r">'+rm(tg.paid)+'</td><td class="r k">'+rmSum(tg.k,tg.missK)+'</td></tr>';
   }).join('');
   var empty=os.length? '':'<p class="ms-note">这个范围内还没有订单，金额为 RM0.00（没有单，不是缺数据）。去「① 代理自己订货」或「② 顾客下单链接」下一张单后，这里会跟着变。</p>';
   app.innerHTML=head+'<main class="mw"><div class="fl"><strong style="font-size:15px">订单统计</strong><button type="button" data-p="all" style="'+(period==='all'?'background:#222;color:#fff':'')+'">全部</button><button type="button" data-p="month" style="'+(period==='month'?'background:#222;color:#fff':'')+'">本月（'+monthLabel(month)+'）</button><span class="n">收款由秘书记录金额和方式。没有取消或退货。</span></div>'+
@@ -215,24 +215,44 @@ function masterAgents(head){
   };
   [].forEach.call(app.querySelectorAll('[data-sdel]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-sdel'),all=staff(),s=all[i];if(!s||!confirm('删除秘书 '+s.acct+'？'))return;all.splice(i,1);saveStaff(all);toast('已删除 '+s.acct);masterAgents(head)}});
 }
-function masterOrders(D,head,asStaff){
-  var os=orders().slice().reverse(),f=get('mof','open');
-  var list=os.filter(function(o){
-    if(f==='all')return true;
-    if(f==='open')return o.status!==ST2;
-    if(f==='unpaid')return !isPaid(o,D);
-    if(f==='paid')return isPaid(o,D);
-    return true;
-  });
-  function fb(id,label){return '<button type="button" data-f="'+id+'" style="'+(f===id?'background:#222;color:#fff':'')+'">'+label+'</button>'}
-  app.innerHTML=head+'<main class="mw"><div class="fl">'+
-    fb('open','未出货（'+os.filter(function(o){return o.status!==ST2}).length+'）')+
-    fb('unpaid','未付款（'+os.filter(function(o){return !isPaid(o,D)}).length+'）')+
-    fb('paid','已付款（'+os.filter(function(o){return isPaid(o,D)}).length+'）')+
-    fb('all','全部（'+os.length+'）')+
-    '<span class="n">'+(asStaff?'确认有货、安排出货；下面记录收款金额和收款方式（收的是进价）。':'确认有货、安排出货；收款由秘书或总盘记录金额和方式。')+'</span></div>'+
-  (list.length?list.map(function(o){return orderCard(o,'master',D)}).join(''):'<div class="oc empty">这个筛选下还没有订单。'+(asStaff?'':'去「① 代理自己订货」或「② 顾客下单链接」下一张示例单。')+'</div>')+(asStaff?'':masterFoot('orders'))+'</main>';
-  [].forEach.call(app.querySelectorAll('[data-f]'),function(b){b.onclick=function(){set('mof',b.getAttribute('data-f'));route()}});
+function moF(){var f=get('mof2',null);if(!f||typeof f!=='object')f={};if(['all','open','done'].indexOf(f.ship)<0)f.ship='all';if(['all','unpaid','paid'].indexOf(f.pay)<0)f.pay='all';return f}
+function orderKey(o){if(o.agentAcct)return o.agentAcct;var a=o.shop&&agentByShop(o.shop);return a?a.acct:'?'+(o.shop||'未记代理')}
+function acctTotals(t){
+  return '<div class="am"><span>进价（应收）<b>'+rmSum(t.a,t.missA)+'</b></span><span>卖价<b>'+rmSum(t.s,t.missS)+'</b></span><span class="k">抽成<b>'+rmSum(t.k,t.missK)+'</b></span><span>已收<b>'+rm(t.paid)+'</b></span><span class="w">要收余额<b>'+rmSum(t.bal,t.missB)+'</b></span></div>';
+}
+function masterOrders(D,head,asStaff,sel){
+  var base=asStaff?'#/cs':'#/master/orders',f=moF(),all=orders().slice().reverse();
+  function okShip(o){return f.ship==='all'||(f.ship==='done'?o.status===ST2:o.status!==ST2)}
+  function okPay(o){return f.pay==='all'||(f.pay==='paid'?isPaid(o,D):!isPaid(o,D))}
+  var by={},keys=[];
+  agents().forEach(function(a){by[a.acct]={name:a.name,acct:a.acct,list:[],all:[]};keys.push(a.acct)});
+  all.forEach(function(o){var k=orderKey(o);if(!by[k]){by[k]={name:o.shop||k.replace(/^\?/,''),acct:k,gone:1,list:[],all:[]};keys.push(k)}by[k].all.push(o);if(okShip(o)&&okPay(o))by[k].list.push(o)});
+  var scope=sel&&by[sel]?by[sel].all:all;
+  function cnt(fn){return scope.filter(fn).length}
+  var isP=function(o){return isPaid(o,D)};
+  var nShipD=cnt(function(o){return o.status===ST2&&okPay(o)}),nShipO=cnt(function(o){return o.status!==ST2&&okPay(o)}),nShipA=cnt(okPay);
+  var nPayP=cnt(function(o){return isP(o)&&okShip(o)}),nPayU=cnt(function(o){return !isP(o)&&okShip(o)}),nPayA=cnt(okShip);
+  function fb(dim,id,label,n){return '<button type="button" data-fd="'+dim+'" data-fv="'+id+'" class="'+(f[dim]===id?'on':'')+'">'+label+' '+n+'</button>'}
+  var bar='<div class="fl2"><div class="fg"><i>出货</i>'+fb('ship','all','全部',nShipA)+fb('ship','open','未出货',nShipO)+fb('ship','done','已出货',nShipD)+'</div>'+
+    '<div class="fg"><i>付款</i>'+fb('pay','all','全部',nPayA)+fb('pay','unpaid','未付款',nPayU)+fb('pay','paid','已付款',nPayP)+'</div></div>';
+  var h;
+  if(sel){
+    var g=by[sel],A=agentByAcct(sel);
+    if(!g){app.innerHTML=head+'<main class="mw"><a class="back" href="'+base+'">‹ 代理户口</a><div class="oc empty">找不到这个代理户口。</div></main>';return}
+    var t=totalsOf(g.list,D);
+    h='<a class="back" href="'+base+'">‹ 代理户口</a><div class="acct top"><div class="an"><b>'+esc(A?A.name:g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在代理名单':'')+'</small><span class="ac">'+t.n+' 单</span></div>'+acctTotals(t)+'</div>'+bar+
+      (g.list.length?g.list.map(function(o){return orderCard(o,'master',D)}).join(''):'<div class="oc empty">这个筛选下，这个代理没有订单。</div>');
+  }else{
+    var show=keys.filter(function(k){return (f.ship==='all'&&f.pay==='all')||by[k].list.length});
+    h='<div class="acch"><h2>代理户口</h2><span>点进去看采购明细'+(asStaff?'、记收款':'')+'</span></div>'+bar+
+      (show.length?show.map(function(k){var g=by[k],L=g.list,t=totalsOf(L,D);
+        var so=L.filter(function(o){return o.status!==ST2}).length,sd=L.length-so,pp=L.filter(isP).length,pt=L.filter(function(o){return !isP(o)&&settleOf(o,D).paid>0}).length,pu=L.length-pp-pt;
+        return '<a class="acct" href="'+base+'/'+encodeURIComponent(k)+'"><div class="an"><b>'+esc(g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在名单':'')+'</small><span class="ac">'+t.n+' 单 ›</span></div>'+acctTotals(t)+
+          (L.length?'<div class="cn"><span class="'+(so?'x':'')+'">未出货 '+so+'</span><span>已出货 '+sd+'</span><span class="'+(pu?'x':'')+'">未付款 '+pu+'</span>'+(pt?'<span class="x">部分付款 '+pt+'</span>':'')+'<span>已付款 '+pp+'</span></div>':'<div class="cn"><span>还没有订单</span></div>')+'</a>';
+      }).join(''):'<div class="oc empty">这个筛选下没有订单。</div>');
+  }
+  app.innerHTML=head+'<main class="mw">'+h+(asStaff||sel?'':masterFoot('orders'))+'</main>';
+  [].forEach.call(app.querySelectorAll('[data-fd]'),function(b){b.onclick=function(){var x=moF();x[b.getAttribute('data-fd')]=b.getAttribute('data-fv');set('mof2',x);route()}});
   [].forEach.call(app.querySelectorAll('[data-st]'),function(b){b.onclick=function(){var all=orders();all.forEach(function(o){if(o.id===b.getAttribute('data-id')){o.status=b.getAttribute('data-st');(o.log=o.log||[]).push({t:tnow(),s:o.status})}});saveOrders(all);toast('已更新：'+b.getAttribute('data-st'));route()}});
   [].forEach.call(app.querySelectorAll('[data-prec]'),function(b){b.onclick=function(){
     var id=b.getAttribute('data-prec'),amt=parseRM(document.getElementById('pa-'+id).value),method=(document.getElementById('pm-'+id).value||'').trim(),note=(document.getElementById('pn-'+id).value||'').trim();
@@ -257,6 +277,8 @@ function lineVals(o,it,D){ // 统一算出 进价/卖价/抽成（顾客单只�
   return{s:s==null?null:s*q,a:a==null?null:a*q,k:(a==null||s==null)?null:(s-a)*q};
 }
 function orderTotals(o,D){var t={qty:0,s:0,a:0,k:0};o.items.forEach(function(it){var v=lineVals(o,it,D);t.qty+=it.qty;t.s+=v.s||0;t.a+=v.a||0;t.k+=v.k||0});return t}
+function donePop(id,wish){var old=document.querySelector('.mdl.okp');if(old)old.remove();var m=document.createElement('div');m.className='mdl okp';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby','okt');m.innerHTML='<div><div class="ok">🎉</div><h3 id="okt">下单已成</h3><div class="oid"><i>订单号</i><b>'+esc(id)+'</b></div><p class="pr">为了您的保障，请截图保留下单订单号。</p><p class="wish">'+esc(wish)+'</p><button class="btn gd" type="button">我已截图</button></div>';m.querySelector('button').onclick=function(){m.remove()};document.body.appendChild(m);m.querySelector('button').focus()}
+function shipTxt(c){if(c.ship==='agent')return '<b class="shm">🛵 代理送货</b>';if(c.ship==='post')return '<b class="shm">📮 邮寄</b> · '+esc(c.addr);return esc(c.addr||'')}
 function orderCard(o,view,D){
   var src=o.kind==='agent'?'<span class="kind">自己订货</span>':'<span class="kind">顾客下单</span>';
   var who=o.kind==='agent'?'代理 '+esc(o.agentAcct):'顾客 '+esc(o.cust.user)+' · 经代理 '+esc(o.shop);
@@ -265,7 +287,7 @@ function orderCard(o,view,D){
   var rows=o.items.map(function(it){var v=lineVals(o,it,D);return '<tr><td>'+it.sku+' '+esc(it.name)+'<br><small class="muted">'+modeTxt(it,view)+'</small></td><td class="r">'+it.qty+'</td>'+(showCost?'<td class="r">'+rmx(v.a)+'</td>':'')+'<td class="r">'+rmx(v.s)+'</td>'+(showCost?'<td class="r">'+rmx(v.k)+'</td>':'')+'</tr>'}).join('');
   var h='<div class="oc"><div class="h"><b>'+o.id+'</b>'+(view==='cust'?'':src)+'<span class="st '+stc(o.status)+'">'+esc(o.status)+'</span>'+paySt+'<span class="t">'+tfmt(o.time)+'</span></div>';
   if(view!=='cust')h+='<div class="t muted" style="font-size:12.5px">'+who+'</div>';
-  if(o.kind==='cust'&&view!=='agent-lite')h+='<div class="note">📦 收货：<b>'+esc(o.cust.name)+'</b> · '+esc(o.cust.phone)+'<br>'+esc(o.cust.addr)+(o.cust.memo?'<br>备注：'+esc(o.cust.memo):'')+'</div>';
+  if(o.kind==='cust'&&view!=='agent-lite')h+='<div class="note">📦 收货：<b>'+esc(o.cust.name)+'</b> · '+esc(o.cust.phone)+'<br>'+shipTxt(o.cust)+(o.cust.memo?'<br>备注：'+esc(o.cust.memo):'')+'</div>';
   if(o.kind==='agent'&&o.memo)h+='<div class="note">备注：'+esc(o.memo)+'</div>';
   h+='<table><tr><th>产品</th><th class="r">数量</th>'+(showCost?'<th class="r">进价</th>':'')+'<th class="r">卖价</th>'+(showCost?'<th class="r">抽成</th>':'')+'</tr>'+rows+'</table>';
   h+='<div class="sum"><span>数量 <b>'+t.qty+'</b></span>'+(showCost?'<span>进价 <b>'+rmSum(t.a,t.missA)+'</b></span>':'')+'<span>'+(view==='cust'?'订单金额':'卖价')+' <b style="color:#9b1c2c">'+rmSum(t.s,t.missS)+'</b></span>'+(showCost?'<span>抽成 <b style="color:#1b7a3a">'+rmSum(t.k,t.missK)+'</b></span><span>已交 <b>'+rm(t.paid)+'</b></span><span>要收余额 <b style="color:#875a16">'+rmx(t.bal)+'</b></span>':'')+'</div>';
@@ -309,13 +331,13 @@ function staffLogin(){
   document.getElementById('sgo').onclick=function(){var x=u();if(!x){toast('请填名字和电话后四位');return}go(x)};
   document.getElementById('sdemo').onclick=function(){go('小芳0001s')};
 }
-function staffApp(){
+function staffApp(sel){
   var ss=staffSess(),S=ss&&staffByAcct(ss.acct);
   if(!S){if(ss)del('sess.staff');return staffLogin()}
   document.body.className='mst nobn';
   load('master').then(function(D){
     var head='<header class="mh"><div class="in"><h1>客服（秘书）<small>'+esc(S.name)+' · '+esc(S.acct)+' · 只处理订单</small></h1><nav><a href="#/cs" class="on">订单</a><a href="#/cs" id="slo" style="font-weight:500">退出</a></nav></div></header>';
-    masterOrders(D,head,true);
+    masterOrders(D,head,true,sel);
     var lo=document.getElementById('slo');if(lo)lo.onclick=function(e){e.preventDefault();del('sess.staff');toast('已退出');location.hash='#/cs';route()};
   });
 }
@@ -342,7 +364,7 @@ function agent(p,q){
     [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入 ×'+qq);route()}});
     [].forEach.call(app.querySelectorAll('.seg button'),function(b){b.onclick=function(){if(b.disabled)return;[].forEach.call(app.querySelectorAll('.seg button'),function(x){x.classList.remove('on')});b.classList.add('on')}});
     [].forEach.call(app.querySelectorAll('[data-rm]'),function(b){b.onclick=function(){var c=get(ck,[]);c.splice(+b.getAttribute('data-rm'),1);set(ck,c);route()}});
-    var sub=document.getElementById('submit');if(sub)sub.onclick=function(){var c=get(ck,[]);if(!c.length)return;var o={id:oid('A'),kind:'agent',agentAcct:A.acct,shop:A.shop,time:tnow(),status:ST0A,paid:false,memo:document.getElementById('memo').value.trim(),items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,a:u?x.au:x.a,s:u?x.su:x.s}})};var all=orders();all.push(o);saveOrders(all);del(ck);location.hash='#/agent/done/'+o.id};
+    var sub=document.getElementById('submit');if(sub)sub.onclick=function(){var c=get(ck,[]);if(!c.length)return;var o={id:oid('A'),kind:'agent',agentAcct:A.acct,shop:A.shop,time:tnow(),status:ST0A,paid:false,memo:document.getElementById('memo').value.trim(),items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,a:u?x.au:x.a,s:u?x.su:x.s}})};var all=orders();all.push(o);saveOrders(all);del(ck);location.hash='#/agent/done/'+o.id;donePop(o.id,'祝生意兴隆，大吉大利！')};
     var cp=document.getElementById('cpl');if(cp)cp.onclick=function(){var t=document.getElementById('lkf').textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('链接已复制')},function(){toast('请长按复制')})};
   });
 }
@@ -435,16 +457,17 @@ function shop(slug,p,q){
     [].forEach.call(app.querySelectorAll('[data-rm]'),function(b){b.onclick=function(){var c=get(ck,[]);c.splice(+b.getAttribute('data-rm'),1);set(ck,c);route()}});
     [].forEach.call(app.querySelectorAll('[data-ci] button'),function(b){b.onclick=function(){if(b.disabled)return;var i=+b.parentNode.getAttribute('data-ci'),mode=b.value,c=get(ck,[]),line=c[i];if(!line)return;var want=mode==='unit'?'unit':'box';if(line.mode===want)return;var exist=-1;c.forEach(function(l,j){if(j!==i&&l.sku===line.sku&&l.mode===want)exist=j});if(exist>=0){c[exist].qty+=line.qty;c.splice(i,1)}else line.mode=want;set(ck,c);route()}});
     if(page==='login')bindCustLogin(A,base,q.get('next'));
+    [].forEach.call(app.querySelectorAll('.shipo button'),function(b){b.onclick=function(){[].forEach.call(app.querySelectorAll('.shipo button'),function(x){x.classList.remove('on');x.setAttribute('aria-checked','false')});b.classList.add('on');b.setAttribute('aria-checked','true');b.parentNode.classList.remove('bad');var w=document.getElementById('faw');if(w)w.hidden=b.getAttribute('data-ship')!=='post'}});
     var co=document.getElementById('co');if(co)co.onclick=function(){
-      var f={name:document.getElementById('fn').value.trim(),phone:document.getElementById('fp').value.trim(),addr:document.getElementById('fa').value.trim(),memo:document.getElementById('fm').value.trim()},ok=document.getElementById('fc').checked;
-      var bad=[];if(!f.name)bad.push('姓名');if(!isFullPhone(f.phone))bad.push('电话');if(!f.addr)bad.push('收货地址');
-      ['fn','fp','fa'].forEach(function(id){document.getElementById(id).style.borderColor=''});
-      if(bad.length){bad.forEach(function(b){document.getElementById({'姓名':'fn','电话':'fp','收货地址':'fa'}[b]).style.borderColor='#9b1c2c'});toast('请填好：'+bad.join('、'));return}
+      var f={name:document.getElementById('fn').value.trim(),phone:document.getElementById('fp').value.trim(),addr:document.getElementById('fa').value.trim(),memo:document.getElementById('fm').value.trim(),ship:(app.querySelector('.shipo .on')||{getAttribute:function(){return ''}}).getAttribute('data-ship')},ok=document.getElementById('fc').checked;
+      var bad=[];if(!f.name)bad.push('姓名');if(!isFullPhone(f.phone))bad.push('电话');if(!f.ship)bad.push('送货方式');if(f.ship==='post'&&!f.addr)bad.push('收货地址');
+      ['fn','fp','fa'].forEach(function(id){document.getElementById(id).style.borderColor=''});app.querySelector('.shipo').classList.remove('bad');
+      if(bad.length){bad.forEach(function(b){if(b==='送货方式'){app.querySelector('.shipo').classList.add('bad');return}document.getElementById({'姓名':'fn','电话':'fp','收货地址':'fa'}[b]).style.borderColor='#9b1c2c'});toast('请填好：'+bad.join('、'));return}
       if(!ok){toast('请勾选确认资料正确');return}
       var c=get(ck,[]);if(!c.length)return;
-      var prof=get('prof.'+cs.user,{});prof.name=f.name;prof.phone=f.phone;prof.addr=f.addr;set('prof.'+cs.user,prof);
-      var o={id:oid('C'),kind:'cust',shop:A.shop,agentAcct:A.acct,time:tnow(),status:ST0C,paid:false,cust:{user:cs.user,name:f.name,phone:f.phone,addr:f.addr,memo:f.memo},items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,s:u?x.su:x.s}})};
-      var all=orders();all.push(o);saveOrders(all);del(ck);location.hash=base+'/done/'+o.id};
+      var prof=get('prof.'+cs.user,{});prof.name=f.name;prof.phone=f.phone;prof.ship=f.ship;if(f.ship==='post')prof.addr=f.addr;set('prof.'+cs.user,prof);
+      var o={id:oid('C'),kind:'cust',shop:A.shop,agentAcct:A.acct,time:tnow(),status:ST0C,paid:false,cust:{user:cs.user,name:f.name,phone:f.phone,ship:f.ship,addr:f.ship==='post'?f.addr:'',memo:f.memo},items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,s:u?x.su:x.s}})};
+      var all=orders();all.push(o);saveOrders(all);del(ck);location.hash=base+'/done/'+o.id;donePop(o.id,'祝您购炮愉快，佳节红火，大吉大利！')};
   });
 }
 function shopPrice(x){return '<div class="row"><span class="pr"><small>RM</small>'+rm(x.s).slice(2)+'</span><span class="pk">/整盒 '+esc(x.pk)+'</span></div>'+(x.su!=null?'<div class="row"><span class="pr" style="font-size:14px"><small>RM</small>'+rm(x.su).slice(2)+'</span><span class="pk">/件 散装</span></div>':'<div class="pk" style="margin-top:2px">此款只按整盒卖</div>')}
@@ -487,8 +510,8 @@ function shopCart(D,A,ck,base,cs){
   }
   var pr=get('prof.'+cs.user,{});
   return h+'<h2 style="font-size:16px;color:#6e101c;margin:14px 0 4px">基本资料（必填，免得出货搞混）</h2>'+
-  '<div class="lc" style="margin:6px 0;max-width:none;box-shadow:none"><label for="fn">姓名 *</label><input id="fn" value="'+esc(pr.name||cs.name||'')+'" required><label for="fp">电话 *</label><input id="fp" type="tel" inputmode="tel" value="'+esc(pr.phone||cs.phone||'')+'" placeholder="完整电话号码" required><label for="fa">收货地址 *</label><textarea id="fa" required placeholder="门牌、路名、区、邮编、城市">'+esc(pr.addr||'')+'</textarea><label for="fm">备注（选填）</label><textarea id="fm" placeholder="例：方便收货时间"></textarea>'+
-  '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input id="fc" type="checkbox" style="width:auto;margin-top:4px"> 我确认以上姓名、电话、收货地址正确'+(pr.addr?'（已带出上次资料，请再核对）':'')+'</label></div>'+
+  '<div class="lc" style="margin:6px 0;max-width:none;box-shadow:none"><label for="fn">姓名 *</label><input id="fn" value="'+esc(pr.name||cs.name||'')+'" required><label for="fp">电话 *</label><input id="fp" type="tel" inputmode="tel" value="'+esc(pr.phone||cs.phone||'')+'" placeholder="完整电话号码" required><label>送货方式 *</label><div class="shipo" role="radiogroup" aria-label="送货方式"><button type="button" role="radio" data-ship="agent" class="'+(pr.ship==='agent'?'on':'')+'" aria-checked="'+(pr.ship==='agent')+'">🛵 代理送货</button><button type="button" role="radio" data-ship="post" class="'+(pr.ship==='post'?'on':'')+'" aria-checked="'+(pr.ship==='post')+'">📮 邮寄</button></div><div id="faw"'+(pr.ship==='post'?'':' hidden')+'><p class="shipn">西马邮费 RM15 任买（不含在订单金额）</p><label for="fa">收货地址 *</label><textarea id="fa" placeholder="门牌、路名、区、邮编、城市">'+esc(pr.addr||'')+'</textarea></div><label for="fm">备注（选填）</label><textarea id="fm" placeholder="例：方便收货时间"></textarea>'+
+  '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input id="fc" type="checkbox" style="width:auto;margin-top:4px"> 我确认以上资料正确'+(pr.name?'（已带出上次资料，请再核对）':'')+'</label></div>'+
   '<button class="btn gd big" id="co" type="button">提交订单 · '+rm(t)+'</button><p class="tip">登录：'+esc(cs.user)+' · 订单记在代理 '+esc(A.name)+' 名下，送客服人工确认后安排出货。</p></div>';
 }
 function shopOrders(A,base,cs){
