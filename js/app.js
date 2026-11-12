@@ -61,9 +61,9 @@ function route(){
 function home(){
   document.body.className='nobn';
   app.innerHTML='<div class="land"><h1>Hunter BOOM JOHOR · 总盘与下线代理（草稿）</h1>'+
-  '<p>这是给老板看的草稿，三个入口可在顶部黑条随时切换。数据来自 2026 价目表（260 款），订单只存在这台浏览器（localStorage），不连真实系统。</p>'+
+  '<p>这是给老板看的草稿，三个入口可在顶部黑条随时切换。数据来自 2026 价目表（253 款），订单只存在这台浏览器（localStorage），不连真实系统。</p>'+
   '<div class="rc">'+
-  '<a href="#/master"><span class="e">📊</span><b>总盘（永）</b>只看数据，不是店面。<ul><li>260 款总盘箱价、代理进价、卖价、抽成</li><li>散装三列（能算的才显示）</li><li>待确认订单：确认 → 安排出货</li></ul></a>'+
+  '<a href="#/master"><span class="e">📊</span><b>总盘（永）</b>只看数据，不是店面。<ul><li>253 款总盘箱价、代理进价、卖价、抽成</li><li>散装三列（能算的才显示）</li><li>待确认订单：确认 → 安排出货</li></ul></a>'+
   '<a href="#/agent"><span class="e">🧾</span><b>① 代理自己订货</b>登录用户名：<b style="display:inline;font-size:15px">阿伟0901a</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">a</b></li><li>完整产品资料，看进价 / 卖价 / 抽成</li><li>向总盘下单；「我的订单」看订了多少货、多少钱、抽成多少（含顾客下单）</li></ul></a>'+
   '<a href="#/a/阿伟0901"><span class="e">🛍️</span><b>② 顾客下单链接</b>链接：<b style="display:inline;font-size:15px">/a/阿伟0901</b>（没有 a）<ul><li>只显示卖价，看不到总盘、进价、抽成</li><li>顾客用 名字+电话尾号 登录，例：丽芬1688</li><li>下单必填 姓名、电话、收货地址，单挂在阿伟名下</li></ul></a>'+
   '</div><div class="rule"><b>价钱规则（按你定的）：</b> 代理进价 = 总盘 × 1.25；卖价 = 代理进价 × 1.40；抽成 = 卖价 − 代理进价（即进价的 40%）。散装：只有包装 N/1 才算，总盘单件 = 箱价 ÷ N，再按同样规则；其他包装散装留空。金额四舍五入到 RM0.01。<br>例：HB001 8尺红炮（40/1）总盘 RM200 → 进价 RM250 · 卖价 RM350 · 抽成 RM100；散装 进价 RM6.25 · 卖价 RM8.75 · 抽成 RM2.50。</div>'+
@@ -78,20 +78,21 @@ function master(tab){
     var head='<header class="mh"><div class="in"><h1>Hunter BOOM JOHOR 总盘<small>永 · 只看数据 · 草稿</small></h1><nav><a href="#/master" class="'+(tab==='data'?'on':'')+'">价目数据</a><a href="#/master/orders" class="'+(tab==='orders'?'on':'')+'">待确认订单'+(pend?'（'+pend+'）':'')+'</a><a href="#/master/agents" class="'+(tab==='agents'?'on':'')+'">代理名单</a></nav></div></header>';
     if(tab==='orders')return masterOrders(D,head);
     if(tab==='agents')return masterAgents(head);
-    var it=D.items,off=it.filter(function(x){return !x.live}).length,ready=it.filter(function(x){return x.n}).length;
+    var it=D.items.filter(function(x){return x.live}),ready=it.filter(function(x){return x.n}).length;
     var cat={};D.cats.forEach(function(c){cat[c.id]=c.name});
-    app.innerHTML=head+'<main class="mw"><div class="kp"><div><b>'+it.length+'</b>款（价目表）</div><div><b>'+(it.length-off)+'</b>在售</div><div class="x"><b>'+off+'</b>下架（熊炮 HB133–HB139）</div><div><b>'+ready+'</b>散装可算（N/1）</div><div class="w"><b>'+(it.length-ready)+'</b>散装待确认</div><div><b>'+os.length+'</b>订单（草稿）</div></div>'+
-    '<div class="fl"><input id="mq" type="search" placeholder="搜编号 / 中文名 / 英文名 / 包装"><select id="mc"><option value="">全部分类</option>'+D.cats.map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join('')+'</select><select id="ms"><option value="">全部状态</option><option value="on">在售</option><option value="off">下架</option></select><select id="ml"><option value="">散装：全部</option><option value="y">散装可算</option><option value="n">散装待确认</option></select><button id="mx" type="button">导出 CSV</button><span class="n" id="mn"></span></div>'+
+    var cats=D.cats.filter(function(c){return it.some(function(x){return x.cat===c.id})});
+    app.innerHTML=head+'<main class="mw"><div class="kp"><div><b>'+it.length+'</b>款（价目表）</div><div><b>'+ready+'</b>散装可算（N/1）</div><div class="w"><b>'+(it.length-ready)+'</b>散装待确认</div><div><b>'+os.length+'</b>订单（草稿）</div></div>'+
+    '<div class="fl"><input id="mq" type="search" placeholder="搜编号 / 中文名 / 英文名 / 包装"><select id="mc"><option value="">全部分类</option>'+cats.map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join('')+'</select><select id="ml"><option value="">散装：全部</option><option value="y">散装可算</option><option value="n">散装待确认</option></select><button id="mx" type="button">导出 CSV</button><span class="n" id="mn"></span></div>'+
     '<div class="tw"><table class="dt"><thead><tr><th>编号</th><th>分类</th><th>中文名</th><th>英文名</th><th>包装</th><th class="r g1">总盘箱价</th><th class="r">一盒件数</th><th class="r">总盘单件</th><th class="r g1">代理进价(箱)</th><th class="r g1">卖价(箱)</th><th class="r g1">抽成(箱)</th><th class="r g2">散装进价</th><th class="r g2">散装卖价</th><th class="r g2">散装抽成</th><th>状态</th></tr></thead><tbody id="mb"></tbody></table></div>'+
     '<p class="ms-note">来源：'+esc(D.source)+'。总盘箱价 = 价目表箱价，包装照原表。散装只在包装为 N/1 时计算；其他包装留空（不当 0）。</p></main>';
-    var rows=it.map(function(x){return{x:x,s:(x.sku+' '+x.name+' '+x.en+' '+x.pk+' '+cat[x.cat]).toLowerCase(),h:'<tr class="'+(x.live?'':'off')+'"><td class="b">'+x.sku+'</td><td>'+esc(cat[x.cat])+'</td><td class="nm">'+esc(x.name)+'</td><td class="en">'+esc(x.en)+'</td><td>'+esc(x.pk)+'</td><td class="r b">'+rm(x.c)+'</td><td class="r">'+(x.n||'<span class="nil">—</span>')+'</td><td class="r">'+(x.u?'RM'+x.u:'<span class="nil">—</span>')+'</td><td class="r">'+rm(x.a)+'</td><td class="r">'+rm(x.s)+'</td><td class="r">'+rm(x.k)+'</td><td class="r">'+rmx(x.au)+'</td><td class="r">'+rmx(x.su)+'</td><td class="r">'+rmx(x.ku)+'</td><td>'+(x.live?'<span class="tg on">在售</span>':'<span class="tg off">下架</span>')+(x.n?'':' <span class="tg pd">散装待确认</span>')+'</td></tr>'}});
+    var rows=it.map(function(x){return{x:x,s:(x.sku+' '+x.name+' '+x.en+' '+x.pk+' '+cat[x.cat]).toLowerCase(),h:'<tr class="'+(x.live?'':'off')+'"><td class="b">'+x.sku+'</td><td>'+esc(cat[x.cat])+'</td><td class="nm">'+esc(x.name)+'</td><td class="en">'+esc(x.en)+'</td><td>'+esc(x.pk)+'</td><td class="r b">'+rm(x.c)+'</td><td class="r">'+(x.n||'<span class="nil">—</span>')+'</td><td class="r">'+(x.u?'RM'+x.u:'<span class="nil">—</span>')+'</td><td class="r">'+rm(x.a)+'</td><td class="r">'+rm(x.s)+'</td><td class="r">'+rm(x.k)+'</td><td class="r">'+rmx(x.au)+'</td><td class="r">'+rmx(x.su)+'</td><td class="r">'+rmx(x.ku)+'</td><td>'+(x.n?'<span class="tg on">在售</span>':'<span class="tg pd">散装待确认</span>')+'</td></tr>'}});
     var tb=document.getElementById('mb');
-    function draw(){var q=document.getElementById('mq').value.trim().toLowerCase(),c=document.getElementById('mc').value,s=document.getElementById('ms').value,l=document.getElementById('ml').value;
-      var f=rows.filter(function(r){var x=r.x;return(!q||r.s.indexOf(q)>=0)&&(!c||x.cat===c)&&(!s||(s==='on')===x.live)&&(!l||(l==='y')===!!x.n)});
+    function draw(){var q=document.getElementById('mq').value.trim().toLowerCase(),c=document.getElementById('mc').value,l=document.getElementById('ml').value;
+      var f=rows.filter(function(r){var x=r.x;return(!q||r.s.indexOf(q)>=0)&&(!c||x.cat===c)&&(!l||(l==='y')===!!x.n)});
       tb.innerHTML=f.map(function(r){return r.h}).join('')||'<tr><td colspan="15" class="muted">没有符合的产品</td></tr>';document.getElementById('mn').textContent='显示 '+f.length+' / '+rows.length;return f}
-    ['mq','mc','ms','ml'].forEach(function(id){document.getElementById(id).addEventListener('input',draw)});draw();
+    ['mq','mc','ml'].forEach(function(id){document.getElementById(id).addEventListener('input',draw)});draw();
     document.getElementById('mx').onclick=function(){var f=draw(),c=function(v){v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v},m=function(v){return v==null?'':(v/100).toFixed(2)};
-      var L=[['编号','分类','中文名','英文名','包装','总盘箱价','一盒件数','总盘单件','代理进价箱','卖价箱','抽成箱','散装进价','散装卖价','散装抽成','状态']].concat(f.map(function(r){var x=r.x;return[x.sku,cat[x.cat],x.name,x.en,x.pk,m(x.c),x.n||'',x.u||'',m(x.a),m(x.s),m(x.k),m(x.au),m(x.su),m(x.ku),x.live?'在售':'下架']}));
+      var L=[['编号','分类','中文名','英文名','包装','总盘箱价','一盒件数','总盘单件','代理进价箱','卖价箱','抽成箱','散装进价','散装卖价','散装抽成','状态']].concat(f.map(function(r){var x=r.x;return[x.sku,cat[x.cat],x.name,x.en,x.pk,m(x.c),x.n||'',x.u||'',m(x.a),m(x.s),m(x.k),m(x.au),m(x.su),m(x.ku),'在售']}));
       var b=new Blob(['\ufeff'+L.map(function(r){return r.map(c).join(',')}).join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='总盘_草稿导出.csv';a.click()};
   });
 }
@@ -196,12 +197,12 @@ function agentStats(D,A){var my=orders().filter(function(o){return o.shop===A.sh
 function agentHome(D,A,cur,q){
   var list=filterItems(D,cur,q),h='';
   if(!cur&&!q){var st=agentStats(D,A);h+='<section class="hero ag"><span class="tag">① 代理自己订货 · 草稿</span><h1>你好，'+esc(A.name)+'。向总盘订货，<em>进价 · 卖价 · 抽成</em> 一目了然</h1><p>抽成 = 卖价 − 进价（进价的 40%），由总盘设定。下单后客服人工确认，再安排出货。</p><div class="kv"><span>自己订货 <b>'+st.own+'</b> 单 · 进价 <b>'+rm(st.a)+'</b></span><span>顾客下单 <b>'+st.cu+'</b> 单 · 抽成 <b>'+rm(st.k)+'</b></span></div><div class="btns" style="margin-top:12px"><a class="btn gd" href="#/agent/orders">我的订单与抽成</a><a class="btn ol" href="#/agent/link">② 顾客下单链接</a></div></section>'}
-  h+='<section class="sec"><h2>'+(q?'搜索「'+esc(q)+'」':cur?esc(catName(D,cur)):'全部产品')+' <small>'+list.length+' 款'+(cur||q?'':' · 熊炮系列已下架不显示')+'</small></h2>';
+  h+='<section class="sec"><h2>'+(q?'搜索「'+esc(q)+'」':cur?esc(catName(D,cur)):'全部产品')+' <small>'+list.length+' 款'+(cur||q?'':' ')+'</small></h2>';
   return h+(list.length?'<div class="g">'+list.map(function(x){return agentCard(x,'#/agent')}).join('')+'</div>':'<div class="empty">没有找到产品</div>')+'</section>';
 }
 function neighbors(D,x){var l=D.items.filter(function(i){return i.cat===x.cat}),i=l.indexOf(x);return{prev:l[i-1],next:l[i+1],rel:l.filter(function(i){return i!==x}).slice(0,10)}}
 function agentProduct(D,A,sku,base){
-  var x=D.by[sku];if(!x)return '<div class="empty">产品不存在或已下架。</div>';var nb=neighbors(D,x),cn=catName(D,x.cat);
+  var x=D.by[sku];if(!x)return '<div class="empty">产品不存在。</div>';var nb=neighbors(D,x),cn=catName(D,x.cat);
   return '<nav class="bc"><a href="'+base+'">订货首页</a> › <a href="'+base+'/c/'+x.cat+'">'+esc(cn)+'</a> › <span>'+esc(x.name)+'</span></nav><article class="pd"><div class="im">'+img(x,'big')+'<span class="cd2">'+x.sku+'</span></div><div class="pi"><span class="cd2" style="position:static;display:inline-block">'+x.sku+'</span><h1>'+esc(x.name)+'</h1><p class="en" lang="en">'+esc(x.en)+'</p>'+
   '<table class="pt"><tr><th>单位</th><th>进价</th><th>卖价</th><th>抽成</th></tr><tr><td>整箱（'+esc(x.pk)+'）</td><td>'+rm(x.a)+'</td><td class="s">'+rm(x.s)+'</td><td class="k">'+rm(x.k)+'</td></tr>'+(x.n?'<tr><td>散装 / 件</td><td>'+rm(x.au)+'</td><td class="s">'+rm(x.su)+'</td><td class="k">'+rm(x.ku)+'</td></tr>':'<tr><td>散装 / 件</td><td colspan="3" class="nil" style="text-align:center">待确认（包装 '+esc(x.pk)+' 不是 N/1）</td></tr>')+'</table>'+
   '<div class="act"><div class="seg"><button type="button" class="on" value="box">整箱</button><button type="button" value="unit"'+(x.n?'':' disabled title="散装待确认"')+'>散装</button></div>'+qtyBox('pq')+'</div><div class="act"><button class="btn gd" type="button" data-add="'+x.sku+'" data-qf="pq">加入订货车</button><a class="btn ol" href="#/a/'+encodeURIComponent(A.shop)+'/p/'+x.sku+'">看顾客看到的这一款</a></div>'+
@@ -283,7 +284,7 @@ function shopHome(D,A,cur,q,base){
   return h+(list.length?'<div class="g">'+list.map(function(x){return shopCard(x,base)}).join('')+'</div>':'<div class="empty">没有找到产品</div>')+'</section>';
 }
 function shopProduct(D,A,sku,base){
-  var x=D.by[sku];if(!x)return '<div class="empty">产品不存在或已下架。</div>';var nb=neighbors(D,x),cn=catName(D,x.cat);
+  var x=D.by[sku];if(!x)return '<div class="empty">产品不存在。</div>';var nb=neighbors(D,x),cn=catName(D,x.cat);
   return '<nav class="bc"><a href="'+base+'">首页</a> › <a href="'+base+'/c/'+x.cat+'">'+esc(cn)+'</a> › <span>'+esc(x.name)+'</span></nav><article class="pd"><div class="im">'+img(x,'big')+'<span class="cd2">'+x.sku+'</span></div><div class="pi"><span class="cd2" style="position:static;display:inline-block">'+x.sku+'</span><h1>'+esc(x.name)+'</h1><p class="en" lang="en">'+esc(x.en)+'</p>'+
   '<div class="pr">'+rm(x.s)+' <small style="font-size:13px;color:#8a5a4a;font-weight:600">/ 整箱（'+esc(x.pk)+'）</small></div>'+(x.su!=null?'<div class="pr" style="font-size:20px">'+rm(x.su)+' <small style="font-size:13px;color:#8a5a4a;font-weight:600">/ 件 散装</small></div>':'<p class="tip">此款只按整箱卖。</p>')+
   '<div class="act"><div class="seg"><button type="button" class="on" value="box">整箱</button>'+(x.su!=null?'<button type="button" value="unit">散装</button>':'')+'</div>'+qtyBox('pq')+'</div><div class="act"><button class="btn gd" type="button" data-add="'+x.sku+'" data-qf="pq">加入购物车</button><a class="btn ol" href="'+base+'/cart">去结算</a></div>'+
