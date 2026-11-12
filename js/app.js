@@ -21,6 +21,7 @@ function toast(t,ms){var e=document.getElementById('toast');e.textContent=t;e.cl
 function tnow(){return new Date().toISOString()}
 function tfmt(iso){try{return new Date(iso).toLocaleString('zh-CN',{timeZone:'Asia/Kuala_Lumpur',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+'（马来西亚时间）'}catch(e){return iso}}
 function oid(p){var d=new Date(),z=function(n){return(n<10?'0':'')+n};return p+'-'+String(d.getFullYear()).slice(2)+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds())+Math.floor(Math.random()*90+10)}
+function orderNo(o){if(o&&o.id)return String(o.id);var pre=(o&&o.kind==='cust')?'C':'A',t='';try{if(o&&o.time)t=new Date(o.time).toISOString().replace(/[-:TZ.]/g,'').slice(2,14)}catch(e){}var who=(o&&(o.agentAcct||o.shop||(o.cust&&o.cust.user)||''))||'';return pre+'-'+(t||'NODATE')+(who?'-'+who:'')+'（补编）'}
 function tail4(s){var d=String(s||'').replace(/\D/g,'');return d.slice(-4)}
 function phoneDigits(s){return String(s||'').replace(/\D/g,'')}
 function isFullPhone(s){var d=phoneDigits(s);return d.length>=9&&d.length<=15}
@@ -399,7 +400,7 @@ function lineVals(o,it,D){ // 统一算出 进价/卖价/抽成（顾客单只�
   return{s:s==null?null:s*q,a:a==null?null:a*q,k:(a==null||s==null)?null:(s-a)*q};
 }
 function orderTotals(o,D){var t={qty:0,s:0,a:0,k:0};o.items.forEach(function(it){var v=lineVals(o,it,D);t.qty+=it.qty;t.s+=v.s||0;t.a+=v.a||0;t.k+=v.k||0});return t}
-function donePop(id,wish){var old=document.querySelector('.mdl.okp');if(old)old.remove();var m=document.createElement('div');m.className='mdl okp';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby','okt');m.innerHTML='<div><div class="ok">🎉</div><h3 id="okt">下单已成</h3><div class="oid"><i>订单号</i><b>'+esc(id)+'</b></div><p class="pr">为了您的保障，请截图保留下单订单号。</p><p class="wish">'+esc(wish)+'</p><button class="btn gd" type="button">我已截图</button></div>';m.querySelector('button').onclick=function(){m.remove()};document.body.appendChild(m);m.querySelector('button').focus()}
+function donePop(id,wish){var old=document.querySelector('.mdl.okp');if(old)old.remove();var m=document.createElement('div');m.className='mdl okp';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby','okt');m.innerHTML='<div><div class="ok">🎉</div><h3 id="okt">下单已成</h3><div class="oid"><i>单号</i><b>'+esc(id)+'</b></div><p class="pr">为了您的保障，请截图保留单号。</p><p class="wish">'+esc(wish)+'</p><button class="btn gd" type="button">我已截图</button></div>';m.querySelector('button').onclick=function(){m.remove()};document.body.appendChild(m);m.querySelector('button').focus()}
 function shipTxt(c){if(c.ship==='agent')return '<b class="shm">🛵 代理送货</b>';if(c.ship==='post')return '<b class="shm">📮 邮寄</b> · '+esc(c.addr);return esc(c.addr||'')}
 function shipNote(paid){return '<span class="'+(paid?'muted':'shipnote')+'" style="font-size:12.5px">'+(paid?'已安排出货':'已安排出货 · 尚未收款（赊账）')+'</span>'}
 function orderCard(o,view,D){
@@ -411,7 +412,7 @@ function orderCard(o,view,D){
   var packSt=(view!=='cust'&&isPacked(o))?'<span class="st s2">已备货</span>':'';
   var shipSt=view==='cust'?('<span class="st '+(o.status===ST2?'s2':agentChecked(o)?'s1':'s0')+'">'+esc(custSt(o))+'</span>'):('<span class="st '+stc(o.status)+'">'+esc(shipLabel(o))+'</span>');
   var rows=o.items.map(function(it){var v=lineVals(o,it,D);return '<tr><td>'+it.sku+' '+esc(it.name)+'<br><small class="muted">'+modeTxt(it,isCust(o)?'cust':view)+'</small></td><td class="r">'+it.qty+'</td>'+(showCost?'<td class="r">'+rmx(v.a)+'</td>':'')+'<td class="r">'+rmx(v.s)+'</td>'+(showCost?'<td class="r">'+rmx(v.k)+'</td>':'')+'</tr>'}).join('');
-  var h='<div class="oc"><div class="h"><b>'+o.id+'</b>'+(view==='cust'?'':src)+shipSt+chkSt+packSt+paySt+'<span class="t">'+tfmt(o.time)+'</span></div>';
+  var h='<div class="oc"><div class="h"><b class="ono"><i>单号</i> '+esc(orderNo(o))+'</b>'+(view==='cust'?'':src)+shipSt+chkSt+packSt+paySt+'<span class="t">'+tfmt(o.time)+'</span></div>';
   if(view!=='cust')h+='<div class="t muted" style="font-size:12.5px">'+who+'</div>';
   if(o.kind==='cust'&&view!=='agent-lite')h+='<div class="note">📦 收货：<b>'+esc(o.cust.name)+'</b> · '+esc(o.cust.phone)+'<br>'+shipTxt(o.cust)+(o.cust.memo?'<br>备注：'+esc(o.cust.memo):'')+'</div>';
   if(o.kind==='agent'&&o.memo)h+='<div class="note">备注：'+esc(o.memo)+'</div>';
@@ -495,7 +496,7 @@ function agent(p,q){
     else if(page==='cart')html+=agentCart(D,A,ck);
     else if(page==='orders')html+=agentOrders(D,A,q.get('f')||'all');
     else if(page==='link')html+=agentLink(A);
-    else if(page==='done')html+='<div class="cp thx"><div class="e">✅</div><h1>已提交给总盘（客服）</h1><p>订单 <b>'+esc(p[1])+'</b> 状态：<span class="st s0">'+ST0A+'</span><br>客服人工确认有货后安排出货。</p><p><a class="btn gd" href="#/agent/orders">看账户详情</a> <a class="btn ol" href="#/agent">继续订货</a></p></div>';
+    else if(page==='done')html+='<div class="cp thx"><div class="e">✅</div><h1>已提交给总盘（客服）</h1><p>单号 <b>'+esc(p[1])+'</b><br>状态：<span class="st s0">'+ST0A+'</span><br>客服人工确认有货后安排出货。</p><p><a class="btn gd" href="#/agent/orders">看账户详情</a> <a class="btn ol" href="#/agent">继续订货</a></p></div>';
     else html+=agentHome(D,A,cur,q.get('q'));
     var nPend=orders().filter(function(o){return (o.shop===A.shop||o.agentAcct===A.acct)&&pendingCust(o)}).length;
     html+='</main>'+bottomNav([{h:base,t:'订货',ic:IC.home,on:!page||page==='c'||page==='p'},{h:base+'/cart',t:'订货车',ic:IC.cart,on:page==='cart',b:cartCount(get(ck,[]))||''},{h:base+'/orders',t:'账户详情',ic:IC.ord,on:page==='orders'||page==='account',b:nPend||''},{h:base+'/link',t:'顾客链接',ic:IC.link,on:page==='link'}]);
@@ -621,7 +622,7 @@ function shop(slug,p,q){
     else if(page==='cart')html+=shopCart(D,A,ck,base,cs);
     else if(page==='login')html+=custLogin(A,base,q.get('next'));
     else if(page==='orders')html+=shopOrders(A,base,cs);
-    else if(page==='done')html+='<div class="cp thx"><div class="e">🎆</div><h1>订单已提交，本店代理正在核对</h1><p>订单编号 <b>'+esc(p[1])+'</b><br>状态：<span class="st s0">订单已提交</span></p><p><a class="btn gd" href="'+base+'/orders">查看我的订单</a> <a class="btn ol" href="'+base+'">继续逛</a></p></div>';
+    else if(page==='done')html+='<div class="cp thx"><div class="e">🎆</div><h1>订单已提交，本店代理正在核对</h1><p>单号 <b>'+esc(p[1])+'</b><br>状态：<span class="st s0">订单已提交</span></p><p><a class="btn gd" href="'+base+'/orders">查看我的订单</a> <a class="btn ol" href="'+base+'">继续逛</a></p></div>';
     else html+=shopHome(D,A,cur,q.get('q'),base);
     html+='</main><footer><div class="in"><div><h2>'+esc(A.name)+'的烟花店（示例）</h2><p>Hunter BOOM JOHOR 产品。价格为卖价；下单后由本店代理核对再出货。</p></div><div><h3>联系</h3><p>联系本店代理：'+esc(A.name)+'（联系方式待代理填写）</p></div><div><h3>分类</h3><p class="cats">'+cats.map(function(c){return '<a href="'+base+'/c/'+c.id+'">'+esc(c.name)+'</a>'}).join('')+'</p></div><p class="legal">燃放烟花请遵守当地法律法规。本页为草稿示例。</p></div></footer>';
     html+=bottomNav([{h:base,t:'首页',ic:IC.home,on:!page||page==='c'||page==='p'},{h:base+'/cart',t:'购物车',ic:IC.cart,on:page==='cart',b:cartCount(get(ck,[]))||''},{h:base+'/orders',t:'我的订单',ic:IC.ord,on:page==='orders'},{h:cs?base+'/orders':base+'/login',t:cs?esc(cs.name||cs.user):'登录',ic:IC.user,on:page==='login'}]);

@@ -385,3 +385,7 @@ a.acct:hover,a.acct:active{border-color:#d4a017;border-left-color:#9b1c2c;backgr
 .cp.settle .adet > h2{font-size:15px;margin:0 0 8px;color:#2a1614}
 .cp.settle .adet .ask{margin:0 0 14px}
 .cp.settle .adet .ask.sm, .cp.settle .ask{grid-template-columns:none}
+
+/* 订单卡单号 */
+.oc .h b.ono{font-size:15.5px;color:#2a1614;font-weight:800;margin-right:2px}
+.oc .h b.ono i{font-style:normal;font-size:12px;font-weight:800;color:#9b1c2c;margin-right:4px;letter-spacing:.04em}
