@@ -146,3 +146,18 @@ body.mst .oc{border-color:#e3ddd6;border-radius:10px}
 .mdl h3{margin:0 0 6px;color:var(--rd)}
 .bn.n5{grid-template-columns:repeat(5,1fr)}
 .bn a{position:relative}
+
+/* 总盘：开下线 / 改抽成 */
+.af{margin:14px 0 0;padding:14px;background:#faf8f5;border:1px dashed #e3ddd6;border-radius:10px}
+.af h3{margin:0 0 10px;font-size:15px}
+.af .row{display:grid;gap:8px;margin:0 0 8px}
+@media(min-width:720px){.af .row{grid-template-columns:1fr 1fr 140px}}
+.af label{display:block;font-size:12px;font-weight:700;margin:0 0 4px}
+.af input{width:100%;border:1px solid #d8d1c9;border-radius:8px;padding:8px 10px;font:inherit;box-sizing:border-box}
+.af .pvw{font-size:13px;background:#fff;border-radius:8px;padding:8px 10px;margin:0 0 8px}
+.af .ex,.rt + .ex,td .ex{font-size:12px;color:#6d4538;margin:6px 0 0}
+.af .btn{margin-top:4px;max-width:240px}
+.rt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rt input{width:72px;border:1px solid #d8d1c9;border-radius:8px;padding:5px 8px;font:inherit;text-align:right}
+.rt button.sv{border:1px solid #c8161d;background:#c8161d;color:#fff;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:13px}
+.rt button.sv:hover{filter:brightness(1.05)}
