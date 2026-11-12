@@ -5,6 +5,7 @@ var DEMO_AGENT={name:'阿伟',tail:'0901',acct:'阿伟0901a',shop:'阿伟0901',r
 var AGENT_ABC={name:'abc',tail:'1234',acct:'abc1234a',shop:'abc1234',rate:0.4};
 var DEMO_CUST={name:'丽芬',phone:'012-345 6789'};
 var LS='hbd.';
+var CREDIT_DEF=1000000,CREDIT_CAP=100000000;
 var app=document.getElementById('app');
 var LOGO='<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fceee0"/><g stroke="#9b1c2c" stroke-width="3.4" stroke-linecap="round"><path d="M32 8v12M32 44v12M8 32h12M44 32h12M15 15l8.5 8.5M40.5 40.5L49 49M49 15l-8.5 8.5M23.5 40.5L15 49"/></g><circle cx="32" cy="32" r="6.5" fill="#d4a017"/></svg>';
 var PHSVG='<svg viewBox="0 0 64 64" aria-hidden="true"><g stroke="#b8e6e1" stroke-width="3" stroke-linecap="round" fill="none"><path d="M32 8v12M32 44v12M8 32h12M44 32h12M15 15l8.5 8.5M40.5 40.5L49 49M49 15l-8.5 8.5M23.5 40.5L15 49"/></g><circle cx="32" cy="32" r="6" fill="#d4a017"/></svg>';
@@ -16,7 +17,7 @@ function rmx(c){return c==null?'<span class="nil">—</span>':rm(c)}
 function get(k,d){try{var v=localStorage.getItem(LS+k);return v?JSON.parse(v):d}catch(e){return d}}
 function set(k,v){localStorage.setItem(LS+k,JSON.stringify(v))}
 function del(k){localStorage.removeItem(LS+k)}
-function toast(t){var e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show')},1600)}
+function toast(t,ms){var e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show')},ms||Math.max(1600,Math.min(4000,40*String(t).length)))}
 function tnow(){return new Date().toISOString()}
 function tfmt(iso){try{return new Date(iso).toLocaleString('zh-CN',{timeZone:'Asia/Kuala_Lumpur',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+'（马来西亚时间）'}catch(e){return iso}}
 function oid(p){var d=new Date(),z=function(n){return(n<10?'0':'')+n};return p+'-'+String(d.getFullYear()).slice(2)+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds())+Math.floor(Math.random()*90+10)}
@@ -25,7 +26,7 @@ function phoneDigits(s){return String(s||'').replace(/\D/g,'')}
 function isFullPhone(s){var d=phoneDigits(s);return d.length>=9&&d.length<=15}
 function custUser(name,phone){return name+phoneDigits(phone)}
 function seedAgents(){return [{name:'阿伟',tail:'0901',acct:'阿伟0901a',shop:'阿伟0901',rate:0.4},{name:'abc',tail:'1234',acct:'abc1234a',shop:'abc1234',rate:0.4}]}
-function agents(){var L=get('agents',null);if(!Array.isArray(L)||!L.length){L=seedAgents();set('agents',L)}L.forEach(function(a){if(a.rate==null||!isFinite(a.rate))a.rate=0.4;if(!a.sell||typeof a.sell!=='object'||Array.isArray(a.sell))a.sell={};if(a.rateMin==null||!isFinite(a.rateMin))a.rateMin=0;if(!a.acct)a.acct=a.name+a.tail+'a';if(!a.shop)a.shop=a.name+a.tail});return L}
+function agents(){var L=get('agents',null);if(!Array.isArray(L)||!L.length){L=seedAgents();set('agents',L)}L.forEach(function(a){if(a.rate==null||!isFinite(a.rate))a.rate=0.4;if(!a.sell||typeof a.sell!=='object'||Array.isArray(a.sell))a.sell={};if(a.rateMin==null||!isFinite(a.rateMin))a.rateMin=0;if(a.creditMax==null||!isFinite(a.creditMax))a.creditMax=CREDIT_DEF;if(!a.acct)a.acct=a.name+a.tail+'a';if(!a.shop)a.shop=a.name+a.tail});return L}
 function saveAgents(L){set('agents',L)}
 function seedStaff(){return [{name:'小芳',tail:'0001',acct:'小芳0001s'}]}
 function staff(){var L=get('staff',null);if(!Array.isArray(L)){L=seedStaff();set('staff',L)}L.forEach(function(s){if(!s.acct)s.acct=s.name+s.tail+'s'});return L}
@@ -93,7 +94,7 @@ function isPaid(o,D){var d=dueOf(o,D);if(paysOf(o).length)return !d.miss&&paidAm
 function settleOf(o,D){var t={qty:0,s:0,a:0,k:0,missS:0,missA:0,missK:0};(o.items||[]).forEach(function(it){var v=lineVals(o,it,D);t.qty+=it.qty||0;if(v.s==null)t.missS++;else t.s+=v.s;if(v.a==null)t.missA++;else t.a+=v.a;if(v.k==null)t.missK++;else t.k+=v.k});var p=paidAmt(o,t.missA?null:t.a);t.paid=p;t.legacy=!!(o.paid&&!paysOf(o).length);t.missB=t.missA?1:0;t.bal=t.missA?null:t.a-p;return t}
 function payMethods(o){var L=paysOf(o),u=[],seen={};L.forEach(function(p){var m=p.method||'未记方式';if(!seen[m]){seen[m]=1;u.push(m)}});if(!L.length&&o.paid)u.push('已付款（未记方式）');return u}
 function payListHtml(o,canDel){var L=paysOf(o);if(!L.length)return o.paid?'<p class="tip">已付款（当时未记金额和方式）</p>':'';return '<ul class="paylog">'+L.map(function(p,i){return '<li><span>'+tshort(p.t)+' · '+esc(p.method)+(p.by?' · '+esc(p.by):'')+(p.note?' · '+esc(p.note):'')+'</span><b>'+rm(p.amount)+'</b>'+(canDel?' <button type="button" class="rm" data-pdel="'+esc(o.id)+'" data-pi="'+i+'">删除</button>':'')+'</li>'}).join('')+'</ul>'}
-function payBox(o,t,edit){var L=paysOf(o);if(!edit&&!L.length&&!o.paid)return '';var h='<div class="paybox">';if(edit)h+='<div class="payform"><input id="pa-'+o.id+'" inputmode="decimal" placeholder="收款金额" value="'+(t.bal>0?(t.bal/100).toFixed(2):'')+'" aria-label="收款金额"><select id="pm-'+o.id+'" aria-label="收款方式">'+PAY_M.map(function(m){return '<option>'+m+'</option>'}).join('')+'</select><input id="pn-'+o.id+'" placeholder="备注（选填）" aria-label="备注"><button type="button" data-prec="'+o.id+'">记录收款</button></div>';h+=payListHtml(o,edit);return h+'</div>'}
+function payBox(o,t,edit){var L=paysOf(o);if(!edit&&!L.length&&!o.paid)return '';var h='<div class="paybox">';if(edit)h+='<div class="payform"><input id="pa-'+o.id+'" inputmode="decimal" placeholder="收款金额" aria-label="收款金额"><select id="pm-'+o.id+'" aria-label="收款方式">'+PAY_M.map(function(m){return '<option>'+m+'</option>'}).join('')+'</select><input id="pn-'+o.id+'" placeholder="备注（选填）" aria-label="备注"><button type="button" data-prec="'+o.id+'">记录收款</button></div>';h+=payListHtml(o,edit);return h+'</div>'}
 function ymKL(iso){try{return new Date(iso).toLocaleString('sv-SE',{timeZone:'Asia/Kuala_Lumpur'}).slice(0,7)}catch(e){return ''}}
 function thisMonthKL(){return new Date().toLocaleString('sv-SE',{timeZone:'Asia/Kuala_Lumpur'}).slice(0,7)}
 function monthLabel(ym){if(!ym||ym.length<7)return ym;return ym.slice(0,4)+'年'+parseInt(ym.slice(5,7),10)+'月'}
@@ -104,6 +105,15 @@ function totalsOf(list,D){
 }
 function rmSum(v,miss){if(miss){return (v?rm(v):'—')+'<small class="miss">（有缺）</small>'}return rm(v)}
 function modeTxt(it,view){return it.mode==='unit'?'散装（件）':(view==='cust'?'整盒':'整箱')+'（'+esc(it.pk)+'）'}
+function creditMaxOf(A){var n=A&&A.creditMax;if(n==null||!isFinite(n))return CREDIT_DEF;return Math.max(0,Math.round(+n))}
+function parseCredit(s){var n=parseRM(s);if(n==null||n>CREDIT_CAP)return null;return n}
+function creditOf(A,D){var acct=(A&&A.acct)||A,max=creditMaxOf(A&&typeof A==='object'?A:{});var t=totalsOf(orders().filter(function(o){return orderKey(o)===acct}),D);var used=t.missB?null:t.bal,miss=!!t.missB;return{max:max,used:used,remain:miss?null:max-(used||0),miss:miss,t:t}}
+function creditTxt(c){return '最高 '+rm(c.max)+' · 已用 '+(c.miss?rmSum(c.t.bal,1):rm(c.used||0))+' · 还可赊 '+(c.miss?rmSum(null,1):rm(c.remain))}
+function linesCost(lines,D){var a=0,miss=false;(lines||[]).forEach(function(it){var v=lineVals({},it,D);if(v.a==null)miss=true;else a+=v.a});return{a:a,miss:miss}}
+function creditDeny(A,D,lines,costD){var oc=linesCost(lines,costD||D);if(oc.miss)return '本单进价有缺，无法核对赊账额度';var c=creditOf(A,D);if(c.miss)return '已用赊账有缺，无法核对额度';if((c.used||0)+oc.a>c.max)return '超出赊账额度：最高 '+rm(c.max)+'，已用 '+rm(c.used||0)+'，本单进价 '+rm(oc.a);return null}
+function applyPay(o,amt,method,note,by,D){o.pays=paysOf(o).concat([{id:oid('P'),amount:amt,method:method,note:note,t:tnow(),by:by}]);var st=settleOf(o,D);o.paid=!st.missA&&st.paid>=st.a;o.paidAt=o.paid?tnow():(o.paidAt||null);(o.log=o.log||[]).push({t:tnow(),s:'收款 '+rm(amt)+' · '+method})}
+function repayAcct(acct,amt,method,note,by,D){var all=orders(),list=all.filter(function(o){return orderKey(o)===acct}).slice().sort(function(a,b){return String(a.time||'').localeCompare(String(b.time||''))}),t=totalsOf(list,D);if(t.missB)return{err:'进价有缺，无法核对要收余额'};if(!t.bal||t.bal<=0)return{err:'已经还清，不用还款'};if(amt==null||amt<=0)return{err:'请填写还款金额'};if(amt>t.bal)return{err:'不能超过要收余额 '+rm(t.bal)};var left=amt,n=0;list.forEach(function(o){if(left<=0)return;var st=settleOf(o,D);if(st.missA||!st.bal||st.bal<=0)return;var part=Math.min(left,st.bal);applyPay(o,part,method,note,by,D);left-=part;n++});if(!n)return{err:'没有可还的订单'};saveOrders(all);return{n:n,amt:amt}}
+function creditBox(c,canRepay){var h='<div class="crbox"><div class="cr"><b>赊账</b> '+creditTxt(c)+'</div>';if(canRepay){if(!c.miss&&c.used>0)h+='<div class="payform"><input id="ca" inputmode="decimal" placeholder="还款金额（自己填）" aria-label="还款金额"><select id="cm" aria-label="还款方式">'+PAY_M.map(function(m){return '<option>'+m+'</option>'}).join('')+'</select><input id="cn" placeholder="备注（选填）" aria-label="备注"><button type="button" data-crepay="1">记录还款</button></div>';else if(!c.miss)h+='<p class="tip">已经还清，不用还款。</p>';else h+='<p class="tip">进价有缺，无法在这里记还款，请到单笔订单记录收款。</p>'}return h+'</div>'}
 
 /* ---------- 预览条 ---------- */
 document.getElementById('reset').onclick=function(){if(!confirm('清空草稿里的示例订单、购物车、登录，以及新开的下线和秘书？代理会回到阿伟和 abc，秘书会回到小芳0001s。'))return;Object.keys(localStorage).forEach(function(k){if(k.indexOf(LS)===0)localStorage.removeItem(k)});toast('已重置');route()};
@@ -134,7 +144,8 @@ function home(){
   '<a href="#/a/阿伟0901"><span class="e">🛍️</span><b>② 顾客下单链接</b>链接：<b style="display:inline;font-size:15px">/a/阿伟0901</b>（没有 a）<ul><li>只显示卖价，看不到总盘、进价、抽成</li><li>顾客登录填 姓名 + 完整电话号码</li><li>下单必填 姓名、完整电话、收货地址，并可选整盒或散装，单挂在阿伟名下</li></ul></a>'+
   '<a href="#/cs"><span class="e">👩‍💼</span><b>③ 客服（秘书）</b>登录用户名：<b style="display:inline;font-size:15px">小芳0001s</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">s</b>，由总盘开通</li><li>单独入口，一打开就看到下单的货，可确定货、安排出货、记录收款金额和方式</li><li>看不到开下线、改抽成和价目表</li></ul></a>'+
   '</div><div class="rule"><b>价钱规则（按你定的）：</b> 代理进价 = 总盘 × 1.25；卖价 = 代理进价 × 1.40；抽成 = 卖价 − 代理进价（即进价的 40%）。散装：只有包装 N/1 才算，总盘单件 = 箱价 ÷ N，再按同样规则；其他包装散装留空。金额四舍五入到 RM0.01。<br>例：HB001 8尺红炮（40/1）总盘 RM200 → 进价 RM250 · 卖价 RM350 · 抽成 RM100；散装 进价 RM6.25 · 卖价 RM8.75 · 抽成 RM2.50。</div>'+
-  '<div class="rule"><b>登录规则：</b> 代理自己订货 = 名字 + 电话尾号 + <code>a</code>（<code>阿伟0901a</code>）。秘书（客服）= 名字 + 电话尾号 + <code>s</code>（<code>小芳0001s</code>），从 <code>/cs</code> 单独登录，只处理订单，由总盘开通。顾客在代理的顾客链接 <code>/a/阿伟0901</code> 登录，须填 姓名和完整电话（例：丽芬，012-345 6789）。草稿里登录不设密码，只为看流程。</div></div>';
+  '<div class="rule"><b>登录规则：</b> 代理自己订货 = 名字 + 电话尾号 + <code>a</code>（<code>阿伟0901a</code>）。秘书（客服）= 名字 + 电话尾号 + <code>s</code>（<code>小芳0001s</code>），从 <code>/cs</code> 单独登录，只处理订单，由总盘开通。顾客在代理的顾客链接 <code>/a/阿伟0901</code> 登录，须填 姓名和完整电话（例：丽芬，012-345 6789）。草稿里登录不设密码，只为看流程。</div>'+
+  '<div class="rule"><b>出货与收款：</b>出货不代表已收款。代理可赊账，最高默认 RM10,000，总盘可按个别代理改；还款由秘书或总盘在该代理户口自填金额。</div></div>';
 }
 
 /* ======================= 总盘 ======================= */
@@ -150,7 +161,7 @@ function master(tab,sel){
     if(tab==='stats')return masterStats(D,head);
     if(tab==='unpaid')return masterUnpaid(D,head);
     if(tab==='orders')return masterOrders(D,head,false,sel);
-    if(tab==='agents')return masterAgents(head);
+    if(tab==='agents')return masterAgents(head,D);
     var it=D.items.filter(function(x){return x.live}),ready=it.filter(function(x){return x.n}).length;
     var cat={};D.cats.forEach(function(c){cat[c.id]=c.name});
     var cats=D.cats.filter(function(c){return it.some(function(x){return x.cat===c.id})});
@@ -221,10 +232,10 @@ function masterUnpaid(D,head){
   });
   var totBal=0,totMiss=0,totUnp=0;
   rows.forEach(function(r){if(r.t.missB)totMiss++;else totBal+=r.t.bal;totUnp+=r.unp});
-  var cards=rows.map(function(r){var g=r.g,t=r.t;
+  var cards=rows.map(function(r){var g=r.g,t=r.t,cr=creditOf(agentByAcct(g.acct)||{acct:g.acct},D);
     return '<a class="acct debt" href="#/master/orders/'+encodeURIComponent(g.acct)+'"><div class="an"><b>'+esc(g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在名单':'')+'</small><span class="ac w">要收余额 '+rmSum(t.bal,t.missB)+' ›</span></div>'+
       '<div class="am bal"><span class="w">要收余额<b>'+rmSum(t.bal,t.missB)+'</b></span><span>进价（应收）<b>'+rmSum(t.a,t.missA)+'</b></span><span>已收<b>'+rm(t.paid)+'</b></span></div>'+
-      '<div class="cn"><span class="x">未付款 '+r.unp+' 笔</span>'+(r.pt?'<span class="x">部分付款 '+r.pt+'</span>':'')+'</div></a>';
+      '<div class="cn"><span class="x">未付款 '+r.unp+' 笔</span>'+(r.pt?'<span class="x">部分付款 '+r.pt+'</span>':'')+'<span>已用 '+(cr.miss?rmSum(cr.t.bal,1):rm(cr.used||0))+' / 最高 '+rm(cr.max)+'</span></div></a>';
   }).join('');
   var empty=rows.length?'':'<div class="oc empty">这个范围内没有还没还钱的代理。</div>';
   var sum=rows.length?('<p class="unpaid-sum">共 '+rows.length+' 个代理还没还钱 · 未付款 '+totUnp+' 笔 · 要收余额合计 <b>'+rmSum(totBal,totMiss)+'</b></p>'):'';
@@ -233,32 +244,33 @@ function masterUnpaid(D,head){
     (hasDemoOrders(os)?'<p class="ms-note">以上是示例，不是真实生意。</p>':'')+masterFoot('stats')+'</main>';
   [].forEach.call(app.querySelectorAll('[data-p]'),function(b){b.onclick=function(){set('ms.period',b.getAttribute('data-p'));route()}});
 }
-function masterAgents(head){
+function masterAgents(head,D){
   var L=agents();
   function preview(){var n=document.getElementById('nn').value.trim(),t=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX);document.getElementById('np').innerHTML=n&&t.length===4?('将开通：登录 <b>'+esc(n+t+'a')+'</b> · 顾客店 <b>/a/'+esc(n+t)+'</b>'):'请填名字和 4 位尾号';document.getElementById('nx').textContent=r==null?'利润率请填 0–'+RATE_MAX+' 的数字':exAt(r)}
-  var rows=L.map(function(a,i){var nc=sellCount(a);return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#9b1c2c">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><span class="gl">默认利润率</span><input id="r'+i+'" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 默认利润率"> %<span class="gl">最低利润</span><input id="m'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rateMin)+'" aria-label="'+esc(a.name)+' 最低利润率"> %<button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+(nc?' · 代理单独改价 '+nc+' 款':'')+'</div></td></tr>'}).join('');
+  var rows=L.map(function(a,i){var nc=sellCount(a),cr=creditOf(a,D),cm=creditMaxOf(a);return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#9b1c2c">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><span class="gl">默认利润率</span><input id="r'+i+'" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 默认利润率"> %<span class="gl">最低利润</span><input id="m'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rateMin)+'" aria-label="'+esc(a.name)+' 最低利润率"> %<span class="gl">赊账最高（RM）</span><input id="c'+i+'" inputmode="decimal" value="'+(cm/100).toFixed(2)+'" aria-label="'+esc(a.name)+' 赊账最高"><button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+(nc?' · 代理单独改价 '+nc+' 款':'')+'</div><div class="ex crline">'+creditTxt(cr)+'</div></td></tr>'}).join('');
   var SL=staff();
   var srows=SL.map(function(s,i){return '<tr><td>'+esc(s.name)+'（尾号 '+esc(s.tail)+'）</td><td><b>'+esc(s.acct)+'</b></td><td><button type="button" class="rm" data-sdel="'+i+'">删除</button></td></tr>'}).join('');
-  app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开下线。本钱价 = 总盘 × 1.25，不能改。代理可在产品卡上自己改建议售价，不能低于最低利润。</span></div><table class="agt"><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>默认利润率 / 最低利润（改完点保存）</th></tr>'+rows+'</table>'+
-  '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">默认利润率（%）</label><input id="nr" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="40"></div><div><label for="nm">最低利润（%）</label><input id="nm" type="number" min="0" max="100" step="0.01" value="0"></div></div><div class="pvw" id="np">请填名字和 4 位尾号</div><div class="ex" id="nx">'+esc(exAt(0.4))+'</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
+  app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开下线。本钱价 = 总盘 × 1.25，不能改。代理可在产品卡上自己改建议售价，不能低于最低利润。每个代理可赊账，最高默认 RM10,000，可单独改。</span></div><table class="agt"><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>默认利润率 / 最低利润 / 赊账最高（改完点保存）</th></tr>'+rows+'</table>'+
+  '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">默认利润率（%）</label><input id="nr" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="40"></div><div><label for="nm">最低利润（%）</label><input id="nm" type="number" min="0" max="100" step="0.01" value="0"></div><div><label for="nc">赊账最高（RM）</label><input id="nc" inputmode="decimal" value="10000"></div></div><div class="pvw" id="np">请填名字和 4 位尾号</div><div class="ex" id="nx">'+esc(exAt(0.4))+' · 赊账最高默认 RM10,000.00</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
   '<div class="af" id="staffbox"><h3>客服秘书</h3><p style="margin:0 0 10px;font-size:13px;color:#7a5a50">只有总盘可以开通。秘书用单独入口 <a href="#/cs">/cs</a> 登录（用户名 = 名字 + 尾号 + s），只能处理订单，看不到开下线和价目表。</p>'+
   (SL.length?'<table><tr><th>秘书</th><th>登录</th><th></th></tr>'+srows+'</table>':'<p class="muted">还没有秘书。</p>')+
   '<div class="row"><div><label for="sn">名字</label><input id="sn" placeholder="例：小芳" autocomplete="off"></div><div><label for="snt">电话尾号（后四位）</label><input id="snt" inputmode="numeric" maxlength="4" placeholder="例：0001" autocomplete="off"></div></div><div class="pvw" id="spv">请填名字和 4 位尾号</div><button class="btn gd" type="button" id="sadd">开通秘书</button></div>'+
   '<p class="ms-note">用户名 = 名字 + 电话尾号 + a（自己订货）；顾客店链接 /a/名字+尾号（不带 a）；秘书 = 名字 + 尾号 + s，入口 /cs。新开的下线和秘书保存在这台浏览器里，重置后代理回到阿伟和 abc，秘书回到小芳0001s。</p></div>'+masterFoot('agents')+'</main>';
   ['nn','nt','nr'].forEach(function(id){document.getElementById(id).addEventListener('input',preview)});
   L.forEach(function(a,i){var inp=document.getElementById('r'+i);inp.addEventListener('input',function(){var r=parseRate(inp.value,RATE_MAX);document.getElementById('rx'+i).textContent=r==null?'利润率请填 0–'+RATE_MAX+' 的数字':exAt(r)})});
-  [].forEach.call(app.querySelectorAll('[data-save]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-save'),r=parseRate(document.getElementById('r'+i).value,RATE_MAX),mn=parseRate(document.getElementById('m'+i).value,100);if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}if(mn==null){toast('最低利润请填 0 到 100');return}if(r<mn){toast('默认利润率不能低于最低利润');return}var all=agents();all[i].rate=r;all[i].rateMin=mn;saveAgents(all);toast(all[i].name+'：默认 '+ratePct(r)+'% · 最低 '+ratePct(mn)+'%');masterAgents(head)}});
+  [].forEach.call(app.querySelectorAll('[data-save]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-save'),r=parseRate(document.getElementById('r'+i).value,RATE_MAX),mn=parseRate(document.getElementById('m'+i).value,100),cm=parseCredit(document.getElementById('c'+i).value);if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}if(mn==null){toast('最低利润请填 0 到 100');return}if(r<mn){toast('默认利润率不能低于最低利润');return}if(cm==null){toast('赊账最高请填 0 到 RM1,000,000 的金额');return}var all=agents();all[i].rate=r;all[i].rateMin=mn;all[i].creditMax=cm;saveAgents(all);toast(all[i].name+'：默认 '+ratePct(r)+'% · 最低 '+ratePct(mn)+'% · 赊账最高 '+rm(cm));masterAgents(head,D)}});
   document.getElementById('nadd').onclick=function(){
-    var n=document.getElementById('nn').value.trim(),tl=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX),mn=parseRate(document.getElementById('nm').value,100);
+    var n=document.getElementById('nn').value.trim(),tl=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX),mn=parseRate(document.getElementById('nm').value,100),cm=parseCredit(document.getElementById('nc').value);
     if(!n){toast('请填名字');return}
     if(tl.length!==4){toast('电话尾号要 4 位数字');return}
     if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}
     if(mn==null){toast('最低利润请填 0 到 100');return}
     if(r<mn){toast('默认利润率不能低于最低利润');return}
+    if(cm==null){toast('赊账最高请填 0 到 RM1,000,000 的金额');return}
     var acct=n+tl+'a',shop=n+tl,all=agents();
     if(all.some(function(a){return a.acct===acct||a.shop===shop})){toast('这个登录或店铺已经存在');return}
-    all.push({name:n,tail:tl,acct:acct,shop:shop,rate:r,rateMin:mn,sell:{}});saveAgents(all);
-    toast('已开通：'+acct+'，顾客店 /a/'+shop+'，默认利润率 '+ratePct(r)+'%');masterAgents(head);
+    all.push({name:n,tail:tl,acct:acct,shop:shop,rate:r,rateMin:mn,creditMax:cm,sell:{}});saveAgents(all);
+    toast('已开通：'+acct+'，顾客店 /a/'+shop+'，默认利润率 '+ratePct(r)+'%，赊账最高 '+rm(cm));masterAgents(head,D);
   };
   function sprev(){var n=document.getElementById('sn').value.trim(),tl=tail4(document.getElementById('snt').value);document.getElementById('spv').innerHTML=n&&tl.length===4?('将开通秘书登录 <b>'+esc(n+tl+'s')+'</b>，入口 /cs'):'请填名字和 4 位尾号'}
   ['sn','snt'].forEach(function(id){document.getElementById(id).addEventListener('input',sprev)});
@@ -269,9 +281,9 @@ function masterAgents(head){
     var acct=n+tl+'s',all=staff();
     if(acctTaken(acct)||all.some(function(s){return s.acct===acct})){toast('这个登录已经存在');return}
     all.push({name:n,tail:tl,acct:acct});saveStaff(all);
-    toast('已开通秘书：'+acct+'，入口 /cs');masterAgents(head);
+    toast('已开通秘书：'+acct+'，入口 /cs');masterAgents(head,D);
   };
-  [].forEach.call(app.querySelectorAll('[data-sdel]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-sdel'),all=staff(),s=all[i];if(!s||!confirm('删除秘书 '+s.acct+'？'))return;all.splice(i,1);saveStaff(all);toast('已删除 '+s.acct);masterAgents(head)}});
+  [].forEach.call(app.querySelectorAll('[data-sdel]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-sdel'),all=staff(),s=all[i];if(!s||!confirm('删除秘书 '+s.acct+'？'))return;all.splice(i,1);saveStaff(all);toast('已删除 '+s.acct);masterAgents(head,D)}});
 }
 function moF(){var f=get('mof2',null);if(!f||typeof f!=='object')f={};if(['all','open','done'].indexOf(f.ship)<0)f.ship='all';if(['all','unpaid','paid'].indexOf(f.pay)<0)f.pay='all';return f}
 function orderKey(o){if(o.agentAcct)return o.agentAcct;var a=o.shop&&agentByShop(o.shop);return a?a.acct:'?'+(o.shop||'未记代理')}
@@ -297,8 +309,8 @@ function masterOrders(D,head,asStaff,sel){
   if(sel){
     var g=by[sel],A=agentByAcct(sel);
     if(!g){app.innerHTML=head+'<main class="mw"><a class="back" href="'+base+'">‹ 代理户口</a><div class="oc empty">找不到这个代理户口。</div></main>';return}
-    var t=totalsOf(g.list,D);
-    h='<a class="back" href="'+base+'">‹ 代理户口</a><div class="acct top"><div class="an"><b>'+esc(A?A.name:g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在代理名单':'')+'</small><span class="ac">'+t.n+' 单</span></div>'+acctTotals(t)+'</div>'+bar+
+    var t=totalsOf(g.list,D),cr=creditOf(A||{acct:sel},D);
+    h='<a class="back" href="'+base+'">‹ 代理户口</a><div class="acct top"><div class="an"><b>'+esc(A?A.name:g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在代理名单':'')+'</small><span class="ac">'+t.n+' 单</span></div>'+acctTotals(t)+creditBox(cr,true)+'</div>'+bar+
       (g.list.length?g.list.map(function(o){return orderCard(o,'master',D)}).join(''):'<div class="oc empty">这个筛选下，这个代理没有订单。</div>');
   }else if(asStaff){
     var list=all.filter(function(o){return okShip(o)&&okPay(o)});
@@ -333,6 +345,15 @@ function masterOrders(D,head,asStaff,sel){
     all.forEach(function(o){if(o.id===id){var L=paysOf(o).slice();L.splice(i,1);o.pays=L;var st=settleOf(o,D);o.paid=L.length?(!st.missA&&st.paid>=st.a):false;if(!o.paid)o.paidAt=null;(o.log=o.log||[]).push({t:tnow(),s:'删除收款记录'})}});
     saveOrders(all);toast('已删除收款记录');route();
   }});
+  [].forEach.call(app.querySelectorAll('[data-crepay]'),function(b){b.onclick=function(){
+    if(!sel)return;
+    var amt=parseRM(document.getElementById('ca').value),method=(document.getElementById('cm').value||'').trim(),note=(document.getElementById('cn').value||'').trim();
+    if(amt==null||amt<=0){toast('请填写还款金额');return}
+    if(!method){toast('请选还款方式');return}
+    var by=asStaff?((staffSess()||{}).acct||'秘书'):'总盘',r=repayAcct(sel,amt,method,note,by,D);
+    if(r.err){toast(r.err);return}
+    toast('已记还款 '+rm(r.amt)+'（分到 '+r.n+' 张单）');route();
+  }});
 }
 /* 订单卡：view = master | agent | cust ；D 为该角色的数据 */
 function lineVals(o,it,D){ // 统一算出 进价/卖价/抽成（顾客单只存卖价，进价与抽成从代理/总盘数据查）
@@ -356,7 +377,7 @@ function orderCard(o,view,D){
   if(o.kind==='agent'&&o.memo)h+='<div class="note">备注：'+esc(o.memo)+'</div>';
   h+='<table><tr><th>产品</th><th class="r">数量</th>'+(showCost?'<th class="r">进价</th>':'')+'<th class="r">卖价</th>'+(showCost?'<th class="r">抽成</th>':'')+'</tr>'+rows+'</table>';
   h+='<div class="sum"><span>数量 <b>'+t.qty+'</b></span>'+(showCost?'<span>进价 <b>'+rmSum(t.a,t.missA)+'</b></span>':'')+'<span>'+(view==='cust'?'订单金额':'卖价')+' <b style="color:#9b1c2c">'+rmSum(t.s,t.missS)+'</b></span>'+(showCost?'<span>抽成 <b style="color:#1b7a3a">'+rmSum(t.k,t.missK)+'</b></span><span>已交 <b>'+rm(t.paid)+'</b></span><span>要收余额 <b style="color:#875a16">'+rmx(t.bal)+'</b></span>':'')+'</div>';
-  if(view==='master'){h+='<div class="ops">'+(o.status!==ST1&&o.status!==ST2?'<button data-st="'+ST1+'" data-id="'+o.id+'">✓ 确定货</button>':'')+(o.status!==ST2?'<button class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>':'<span class="muted" style="font-size:12.5px">已安排出货</span>')+'</div>';h+=payBox(o,t,true)}
+  if(view==='master'){h+='<div class="ops">'+(o.status!==ST1&&o.status!==ST2?'<button data-st="'+ST1+'" data-id="'+o.id+'">✓ 确定货</button>':'')+(o.status!==ST2?'<button class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>':'<span class="'+(paid?'muted':'shipnote')+'" style="font-size:12.5px">'+(paid?'已安排出货':'已安排出货 · 尚未收款（赊账）')+'</span>')+'</div>';h+=payBox(o,t,true)}
   if(view==='agent')h+=payBox(o,t,false);
   if(view==='cust')h+='<p class="tip">'+(o.status===ST2?'客服已安排出货。':o.status===ST1?'客服已确认有货，稍后安排出货。':'订单已提交，客服确认货后安排出货。')+'</p>';
   return h+'</div>';
@@ -430,7 +451,7 @@ function agent(p,q){
     [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入 ×'+qq);route()}});
     [].forEach.call(app.querySelectorAll('.seg button'),function(b){b.onclick=function(){if(b.disabled)return;[].forEach.call(app.querySelectorAll('.seg button'),function(x){x.classList.remove('on')});b.classList.add('on')}});
     [].forEach.call(app.querySelectorAll('[data-rm]'),function(b){b.onclick=function(){var c=get(ck,[]);c.splice(+b.getAttribute('data-rm'),1);set(ck,c);route()}});
-    var sub=document.getElementById('submit');if(sub)sub.onclick=function(){var c=get(ck,[]);if(!c.length)return;var o={id:oid('A'),kind:'agent',agentAcct:A.acct,shop:A.shop,time:tnow(),status:ST0A,paid:false,memo:document.getElementById('memo').value.trim(),items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,a:u?x.au:x.a,s:u?x.su:x.s}})};var all=orders();all.push(o);saveOrders(all);del(ck);location.hash='#/agent/done/'+o.id;donePop(o.id,'祝生意兴隆，大吉大利！')};
+    var sub=document.getElementById('submit');if(sub)sub.onclick=function(){var c=get(ck,[]);if(!c.length)return;var items=c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,a:u?x.au:x.a,s:u?x.su:x.s}});var deny=creditDeny(A,D,items,D);if(deny){toast(deny);return}var o={id:oid('A'),kind:'agent',agentAcct:A.acct,shop:A.shop,time:tnow(),status:ST0A,paid:false,memo:document.getElementById('memo').value.trim(),items:items};var all=orders();all.push(o);saveOrders(all);del(ck);location.hash='#/agent/done/'+o.id;donePop(o.id,'祝生意兴隆，大吉大利！')};
     bindRateBar(A);
     var cp=document.getElementById('cpl');if(cp)cp.onclick=function(){var t=document.getElementById('lkf').textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('链接已复制')},function(){toast('请长按复制')})};
   });
@@ -505,12 +526,13 @@ function agentOrders(D,A,f){
   var my=orders().filter(function(o){return o.shop===A.shop}).reverse();
   var own=my.filter(function(o){return o.kind==='agent'}),cu=my.filter(function(o){return o.kind==='cust'});
   var list=f==='own'?own:f==='cust'?cu:my;
-  var ra=totalsOf(my,D),ro=totalsOf(own,D),rc=totalsOf(cu,D);
+  var ra=totalsOf(my,D),ro=totalsOf(own,D),rc=totalsOf(cu,D),cr=creditOf(A,D);
   function src(lab,r){return '<div class="setrow"><b>'+lab+'</b><span>'+r.n+' 单</span><span class="k">抽成 '+rmSum(r.k,r.missK)+'</span><span class="w">要收 '+rmSum(r.bal,r.missB)+'</span></div>'}
   return '<div class="cp settle"><h1>交帐给总盘</h1>'+
   '<div class="tot stt"><div class="k"><i>抽成合计</i><b>'+rmSum(ra.k,ra.missK)+'</b></div><div class="w"><i>要收余额（Balance）</i><b>'+rmSum(ra.bal,ra.missB)+'</b></div></div>'+
   src('自己订货',ro)+src('顾客下单',rc)+
   '<p class="setsub">应付进价 '+rmSum(ra.a,ra.missA)+' · 已交 '+rm(ra.paid)+' · 卖价 '+rmSum(ra.s,ra.missS)+'</p>'+
+  '<p class="crline">赊账 '+creditTxt(cr)+'</p>'+
   '<div class="act"><div class="seg"><button type="button" onclick="location.hash=\'#/agent/orders?f=all\'" class="'+(f==='all'?'on':'')+'">全部 '+my.length+'</button><button type="button" onclick="location.hash=\'#/agent/orders?f=own\'" class="'+(f==='own'?'on':'')+'">自己订货 '+own.length+'</button><button type="button" onclick="location.hash=\'#/agent/orders?f=cust\'" class="'+(f==='cust'?'on':'')+'">顾客下单 '+cu.length+'</button></div></div>'+
   (list.length?list.map(function(o){return orderCard(o,'agent',D)}).join(''):'<div class="empty">还没有订单。</div>')+
   '</div>';
@@ -529,7 +551,7 @@ function custSess(){return get('sess.cust',null)}
 function shop(slug,p,q){
   var A=agentByShop(slug);
   if(!A){app.innerHTML='<div class="lc"><h1>找不到这家店</h1><p>链接 /a/'+esc(slug)+' 不是有效的代理店铺。'+(/a$/.test(slug)?'（顾客链接没有 a，例：/a/阿伟0901）':'')+'</p><a class="btn gd" href="#/a/阿伟0901">打开示例店 /a/阿伟0901</a></div>';document.body.className='nobn';return}
-  load('agent').then(function(D0){var D=shopOnly(D0,A);
+  load('agent').then(function(D0){var D=shopOnly(D0,A),costD=withRate(D0,A);
     var cs0=custSess();if(cs0){var gk='cart.shop.'+A.shop+'.guest',g=get(gk,[]);if(g.length){g.forEach(function(l){addTo('cart.shop.'+A.shop+'.'+cs0.user,l.sku,l.mode,l.qty)});del(gk)}}
     var base='#/a/'+encodeURIComponent(A.shop),cs=custSess(),ck='cart.shop.'+A.shop+'.'+(cs?cs.user:'guest'),cats=liveCats(D),cur=p[0]==='c'?p[1]:'',page=p[0]||'';
     var html=topbar({base:base,title:A.name+'的烟花店',sub:'② 顾客下单 · 示例店 · /a/'+A.shop,cats:cats,cur:cur,q:q.get('q')});
@@ -560,7 +582,9 @@ function shop(slug,p,q){
       if(!ok){toast('请勾选确认资料正确');return}
       var c=get(ck,[]);if(!c.length)return;
       var prof=get('prof.'+cs.user,{});prof.name=f.name;prof.phone=f.phone;prof.ship=f.ship;if(f.ship==='post')prof.addr=f.addr;set('prof.'+cs.user,prof);
-      var o={id:oid('C'),kind:'cust',shop:A.shop,agentAcct:A.acct,time:tnow(),status:ST0C,paid:false,cust:{user:cs.user,name:f.name,phone:f.phone,ship:f.ship,addr:f.ship==='post'?f.addr:'',memo:f.memo},items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,s:u?x.su:x.s}})};
+      var items=c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,s:u?x.su:x.s}});
+      var deny=creditDeny(A,costD,items,costD);if(deny){toast(deny);return}
+      var o={id:oid('C'),kind:'cust',shop:A.shop,agentAcct:A.acct,time:tnow(),status:ST0C,paid:false,cust:{user:cs.user,name:f.name,phone:f.phone,ship:f.ship,addr:f.ship==='post'?f.addr:'',memo:f.memo},items:items};
       var all=orders();all.push(o);saveOrders(all);del(ck);location.hash=base+'/done/'+o.id;donePop(o.id,'祝您购炮愉快，佳节红火，大吉大利！')};
   });
 }

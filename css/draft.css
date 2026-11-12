@@ -164,7 +164,7 @@ body.mst .oc{border-color:#ead8c8;border-radius:10px}
 .af{margin:14px 0 0;padding:14px;background:#f8f0e6;border:1px dashed #ead8c8;border-radius:10px}
 .af h3{margin:0 0 10px;font-size:15px}
 .af .row{display:grid;gap:8px;margin:0 0 8px}
-@media(min-width:720px){.af .row{grid-template-columns:1fr 1fr 140px}}
+@media(min-width:720px){.af .row{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}}
 .af label{display:block;font-size:12px;font-weight:700;margin:0 0 4px}
 .af input{width:100%;border:1px solid #e0cbb4;border-radius:8px;padding:8px 10px;font:inherit;box-sizing:border-box}
 .af .pvw{font-size:13px;background:#fff;border-radius:8px;padding:8px 10px;margin:0 0 8px}
@@ -172,6 +172,7 @@ body.mst .oc{border-color:#ead8c8;border-radius:10px}
 .af .btn{margin-top:4px;max-width:240px}
 .rt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .rt input{width:72px;border:1px solid #e0cbb4;border-radius:8px;padding:5px 8px;font:inherit;text-align:right}
+.rt input[id^=c]{width:100px}
 .rt button.sv{border:1px solid #9b1c2c;background:#9b1c2c;color:#fff;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:13px}
 .rt button.sv:hover{filter:brightness(1.05)}
 
@@ -329,3 +330,13 @@ a.acct:hover,a.acct:active{border-color:#d4a017;border-left-color:#9b1c2c;backgr
 .rbar small{color:#7a5a50;font-size:12px;margin-left:auto}
 .ap .chg{margin-left:4px}
 .chg[hidden]{display:none}
+
+/* 赊账与还款（绛红铜金） */
+.crbox{margin:10px 0 0;padding:10px;background:#fbf6ee;border:1px solid #ead8c8;border-radius:10px}
+.crbox .cr{font-size:13px;color:#4a2a24;margin:0 0 8px;line-height:1.5}
+.crbox .cr b{color:#9b1c2c;margin-right:4px}
+.crbox .tip{margin:0}
+.crline{font-size:13px;color:#4a2a24;margin:8px 0 0;line-height:1.5}
+.acct .crline,.agt .crline{color:#7a5a50}
+.shipnote{color:#875a16;font-weight:700}
+.crbox .payform input[id=ca]{flex:0 1 140px;width:140px}
