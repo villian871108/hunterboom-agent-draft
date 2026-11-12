@@ -27,6 +27,12 @@ function custUser(name,phone){return name+phoneDigits(phone)}
 function seedAgents(){return [{name:'阿伟',tail:'0901',acct:'阿伟0901a',shop:'阿伟0901',rate:0.4},{name:'abc',tail:'1234',acct:'abc1234a',shop:'abc1234',rate:0.4}]}
 function agents(){var L=get('agents',null);if(!Array.isArray(L)||!L.length){L=seedAgents();set('agents',L)}L.forEach(function(a){if(a.rate==null||!isFinite(a.rate))a.rate=0.4;if(!a.acct)a.acct=a.name+a.tail+'a';if(!a.shop)a.shop=a.name+a.tail});return L}
 function saveAgents(L){set('agents',L)}
+function seedStaff(){return [{name:'小芳',tail:'0001',acct:'小芳0001s'}]}
+function staff(){var L=get('staff',null);if(!Array.isArray(L)){L=seedStaff();set('staff',L)}L.forEach(function(s){if(!s.acct)s.acct=s.name+s.tail+'s'});return L}
+function saveStaff(L){set('staff',L)}
+function staffByAcct(acct){var L=staff();for(var i=0;i<L.length;i++)if(L[i].acct===acct)return L[i];return null}
+function staffSess(){return get('sess.staff',null)}
+function acctTaken(acct){return !!(agentByAcct(acct)||staffByAcct(acct))}
 function agentByShop(s){var L=agents();for(var i=0;i<L.length;i++)if(L[i].shop===s)return L[i];return null}
 function agentByAcct(acct){var L=agents();for(var i=0;i<L.length;i++)if(L[i].acct===acct)return L[i];return null}
 function ratePct(r){var p=Math.round((r==null?0.4:r)*10000)/100;return String(p)}
@@ -68,7 +74,7 @@ function rmSum(v,miss){if(miss){return (v?rm(v):'—')+'<small class="miss">（�
 function modeTxt(it,view){return it.mode==='unit'?'散装（件）':(view==='cust'?'整盒':'整箱')+'（'+esc(it.pk)+'）'}
 
 /* ---------- 预览条 ---------- */
-document.getElementById('reset').onclick=function(){if(!confirm('清空草稿里的示例订单、购物车、登录，以及新开的下线？名单会回到阿伟和 abc。'))return;Object.keys(localStorage).forEach(function(k){if(k.indexOf(LS)===0)localStorage.removeItem(k)});toast('已重置');route()};
+document.getElementById('reset').onclick=function(){if(!confirm('清空草稿里的示例订单、购物车、登录，以及新开的下线和秘书？代理会回到阿伟和 abc，秘书会回到小芳0001s。'))return;Object.keys(localStorage).forEach(function(k){if(k.indexOf(LS)===0)localStorage.removeItem(k)});toast('已重置');route()};
 function markPv(r){[].forEach.call(document.querySelectorAll('#pv a'),function(a){a.classList.toggle('on',a.getAttribute('data-r')===r)})}
 
 /* ---------- router ---------- */
@@ -78,7 +84,8 @@ function route(){
   var r=parts(),p=r.p;document.body.className='';
   window.scrollTo(0,0);
   if(!p.length){markPv('home');return home()}
-  if(p[0]==='master'){markPv('master');return master(p[1]||'data')}
+  if(p[0]==='master'){markPv('master');return master(p[1]||'stats')}
+  if(p[0]==='cs'){markPv('cs');return staffApp()}
   if(p[0]==='agent'){markPv('agent');return agent(p.slice(1),r.q)}
   if(p[0]==='a'&&p[1]){markPv('shop');return shop(p[1],p.slice(2),r.q)}
   app.innerHTML='<div class="empty">找不到页面。<a href="#/">回说明页</a></div>';
@@ -88,39 +95,45 @@ function route(){
 function home(){
   document.body.className='nobn';
   app.innerHTML='<div class="land"><h1>Hunter BOOM JOHOR · 总盘与下线代理（草稿）</h1>'+
-  '<p>这是给老板看的草稿，三个入口可在顶部黑条随时切换。数据来自 2026 价目表（253 款），订单只存在这台浏览器（localStorage），不连真实系统。</p>'+
+  '<p>这是给老板看的草稿，入口可在顶部黑条随时切换。数据来自 2026 价目表（253 款），订单只存在这台浏览器（localStorage），不连真实系统。</p>'+
   '<div class="rc">'+
-  '<a href="#/master"><span class="e">📊</span><b>总盘（永）</b>只看数据，不是店面。<ul><li>253 款总盘箱价、代理进价、卖价、抽成</li><li>散装三列（能算的才显示）</li><li>统计：总销售、未付款 / 已付款、出货状态、抽成，可按代理分</li><li>待确认订单：确认 → 安排出货；付款由总盘手工标记</li></ul></a>'+
+  '<a href="#/master"><span class="e">📊</span><b>总盘（永）</b>给老板看的是统计、订单、代理名单。<ul><li>统计：总销售、未付款 / 已付款、出货状态、抽成，可按代理分</li><li>订单：确认有货 → 安排出货；付款由总盘手工标记</li><li>代理名单：开下线、设定抽成</li><li>完整价目表放在内部查阅，不放主菜单，以免扰乱老板</li></ul></a>'+
   '<a href="#/agent"><span class="e">🧾</span><b>① 代理自己订货</b>登录用户名：<b style="display:inline;font-size:15px">阿伟0901a</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">a</b></li><li>完整产品资料，看进价 / 卖价 / 抽成</li><li>向总盘下单；「我的订单」看订了多少货、多少钱、抽成多少（含顾客下单）</li></ul></a>'+
   '<a href="#/a/阿伟0901"><span class="e">🛍️</span><b>② 顾客下单链接</b>链接：<b style="display:inline;font-size:15px">/a/阿伟0901</b>（没有 a）<ul><li>只显示卖价，看不到总盘、进价、抽成</li><li>顾客登录填 姓名 + 完整电话号码</li><li>下单必填 姓名、完整电话、收货地址，并可选整盒或散装，单挂在阿伟名下</li></ul></a>'+
+  '<a href="#/cs"><span class="e">👩‍💼</span><b>③ 客服（秘书）</b>登录用户名：<b style="display:inline;font-size:15px">小芳0001s</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">s</b>，由总盘开通</li><li>单独入口，只处理订单：确认有货、安排出货、标记付款</li><li>看不到开下线、改抽成和价目表</li></ul></a>'+
   '</div><div class="rule"><b>价钱规则（按你定的）：</b> 代理进价 = 总盘 × 1.25；卖价 = 代理进价 × 1.40；抽成 = 卖价 − 代理进价（即进价的 40%）。散装：只有包装 N/1 才算，总盘单件 = 箱价 ÷ N，再按同样规则；其他包装散装留空。金额四舍五入到 RM0.01。<br>例：HB001 8尺红炮（40/1）总盘 RM200 → 进价 RM250 · 卖价 RM350 · 抽成 RM100；散装 进价 RM6.25 · 卖价 RM8.75 · 抽成 RM2.50。</div>'+
-  '<div class="rule"><b>登录规则：</b> 代理自己订货 = 名字 + 电话尾号 + <code>a</code>（<code>阿伟0901a</code>）。顾客在代理的顾客链接 <code>/a/阿伟0901</code> 登录，须填 姓名和完整电话（例：丽芬，012-345 6789）。草稿里登录不设密码，只为看流程。</div></div>';
+  '<div class="rule"><b>登录规则：</b> 代理自己订货 = 名字 + 电话尾号 + <code>a</code>（<code>阿伟0901a</code>）。秘书（客服）= 名字 + 电话尾号 + <code>s</code>（<code>小芳0001s</code>），从 <code>/cs</code> 单独登录，只处理订单，由总盘开通。顾客在代理的顾客链接 <code>/a/阿伟0901</code> 登录，须填 姓名和完整电话（例：丽芬，012-345 6789）。草稿里登录不设密码，只为看流程。</div></div>';
 }
 
 /* ======================= 总盘 ======================= */
+function masterFoot(tab){
+  if(tab==='data')return '<p class="mf">此页是内部价目查阅，不放在老板主菜单。<a href="#/master">返回统计</a></p>';
+  return '<p class="mf"><a href="#/master/data">价目表（内部查阅）</a></p>';
+}
 function master(tab){
   document.body.className='mst nobn';
   load('master').then(function(D){
     var os=orders(),pend=os.filter(function(o){return o.status!==ST2}).length,unp=os.filter(function(o){return !isPaid(o)}).length;
-    var head='<header class="mh"><div class="in"><h1>Hunter BOOM JOHOR 总盘<small>永 · 只看数据 · 草稿</small></h1><nav><a href="#/master/stats" class="'+(tab==='stats'?'on':'')+'">统计</a><a href="#/master" class="'+(tab==='data'?'on':'')+'">价目数据</a><a href="#/master/orders" class="'+(tab==='orders'?'on':'')+'">订单'+(unp||pend?'（'+(unp?'未付款 '+unp+(pend?' · ':''):'')+(pend?'未出货 '+pend:'')+'）':'')+'</a><a href="#/master/agents" class="'+(tab==='agents'?'on':'')+'">代理名单</a></nav></div></header>';
+    var head='<header class="mh"><div class="in"><h1>Hunter BOOM JOHOR 总盘<small>永 · 只看数据 · 草稿</small></h1><nav><a href="#/master" class="'+(tab==='stats'?'on':'')+'">统计</a><a href="#/master/orders" class="'+(tab==='orders'?'on':'')+'">订单'+(unp||pend?'（'+(unp?'未付款 '+unp+(pend?' · ':''):'')+(pend?'未出货 '+pend:'')+'）':'')+'</a><a href="#/master/agents" class="'+(tab==='agents'?'on':'')+'">代理名单</a></nav></div></header>';
     if(tab==='stats')return masterStats(D,head);
     if(tab==='orders')return masterOrders(D,head);
     if(tab==='agents')return masterAgents(head);
     var it=D.items.filter(function(x){return x.live}),ready=it.filter(function(x){return x.n}).length;
     var cat={};D.cats.forEach(function(c){cat[c.id]=c.name});
     var cats=D.cats.filter(function(c){return it.some(function(x){return x.cat===c.id})});
-    app.innerHTML=head+'<main class="mw"><div class="kp"><div><b>'+it.length+'</b>款（价目表）</div><div><b>'+ready+'</b>散装可算（N/1）</div><div class="w"><b>'+(it.length-ready)+'</b>散装待确认</div><div><b>'+os.length+'</b>订单（草稿）</div></div>'+
+    app.innerHTML=head+'<main class="mw"><h2 class="sh">价目表 <small style="font-weight:500;color:#888">内部查阅</small></h2>'+
+    '<div class="kp"><div><b>'+it.length+'</b>款</div><div><b>'+ready+'</b>散装可算（N/1）</div><div class="w"><b>'+(it.length-ready)+'</b>散装待确认</div></div>'+
     '<div class="fl"><input id="mq" type="search" placeholder="搜编号 / 中文名 / 英文名 / 包装"><select id="mc"><option value="">全部分类</option>'+cats.map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join('')+'</select><select id="ml"><option value="">散装：全部</option><option value="y">散装可算</option><option value="n">散装待确认</option></select><button id="mx" type="button">导出 CSV</button><span class="n" id="mn"></span></div>'+
-    '<div class="tw"><table class="dt"><thead><tr><th>编号</th><th>分类</th><th>中文名</th><th>英文名</th><th>包装</th><th class="r g1">总盘箱价</th><th class="r">一盒件数</th><th class="r">总盘单件</th><th class="r g1">代理进价(箱)</th><th class="r g1">卖价(箱)</th><th class="r g1">抽成(箱)</th><th class="r g2">散装进价</th><th class="r g2">散装卖价</th><th class="r g2">散装抽成</th><th>状态</th></tr></thead><tbody id="mb"></tbody></table></div>'+
-    '<p class="ms-note">来源：'+esc(D.source)+'。总盘箱价 = 价目表箱价，包装照原表。表中卖价、抽成按默认 40% 计算；每个代理的实际卖价在「代理名单」按该代理抽成设定。散装只在包装为 N/1 时计算；其他包装留空（不当 0）。</p></main>';
-    var rows=it.map(function(x){return{x:x,s:(x.sku+' '+x.name+' '+x.en+' '+x.pk+' '+cat[x.cat]).toLowerCase(),h:'<tr class="'+(x.live?'':'off')+'"><td class="b">'+x.sku+'</td><td>'+esc(cat[x.cat])+'</td><td class="nm">'+esc(x.name)+'</td><td class="en">'+esc(x.en)+'</td><td>'+esc(x.pk)+'</td><td class="r b">'+rm(x.c)+'</td><td class="r">'+(x.n||'<span class="nil">—</span>')+'</td><td class="r">'+(x.u?'RM'+x.u:'<span class="nil">—</span>')+'</td><td class="r">'+rm(x.a)+'</td><td class="r">'+rm(x.s)+'</td><td class="r">'+rm(x.k)+'</td><td class="r">'+rmx(x.au)+'</td><td class="r">'+rmx(x.su)+'</td><td class="r">'+rmx(x.ku)+'</td><td>'+(x.n?'<span class="tg on">在售</span>':'<span class="tg pd">散装待确认</span>')+'</td></tr>'}});
+    '<div class="tw"><table class="dt dt2"><thead><tr><th rowspan="2" class="sk">编号</th><th rowspan="2">产品</th><th rowspan="2">包装</th><th colspan="4" class="g1">整盒</th><th colspan="3" class="g2">散装（每件）</th></tr><tr><th class="r g1">总盘</th><th class="r g1">进价</th><th class="r g1">卖价</th><th class="r g1">抽成</th><th class="r g2">进价</th><th class="r g2">卖价</th><th class="r g2">抽成</th></tr></thead><tbody id="mb"></tbody></table></div>'+
+    '<p class="ms-note">来源：'+esc(D.source)+'。总盘 = 价目表箱价，包装照原表。表中卖价、抽成按默认 40% 计算；每个代理的实际卖价在「代理名单」按该代理抽成设定。散装只在包装为 N/1 时计算；其他包装留空（不当 0）。</p>'+masterFoot('data')+'</main>';
+    var rows=it.map(function(x){return{x:x,s:(x.sku+' '+x.name+' '+x.en+' '+x.pk+' '+cat[x.cat]).toLowerCase(),h:'<tr><td class="b sk">'+x.sku+'</td><td class="nm">'+esc(x.name)+'<small>'+esc(cat[x.cat])+' · '+esc(x.en)+'</small></td><td>'+esc(x.pk)+(x.n?'<small>'+x.n+' 件</small>':'')+'</td><td class="r b g1">'+rm(x.c)+'</td><td class="r g1">'+rm(x.a)+'</td><td class="r g1">'+rm(x.s)+'</td><td class="r g1">'+rm(x.k)+'</td><td class="r g2">'+rmx(x.au)+'</td><td class="r g2">'+rmx(x.su)+'</td><td class="r g2">'+rmx(x.ku)+'</td></tr>'}});
     var tb=document.getElementById('mb');
     function draw(){var q=document.getElementById('mq').value.trim().toLowerCase(),c=document.getElementById('mc').value,l=document.getElementById('ml').value;
       var f=rows.filter(function(r){var x=r.x;return(!q||r.s.indexOf(q)>=0)&&(!c||x.cat===c)&&(!l||(l==='y')===!!x.n)});
-      tb.innerHTML=f.map(function(r){return r.h}).join('')||'<tr><td colspan="15" class="muted">没有符合的产品</td></tr>';document.getElementById('mn').textContent='显示 '+f.length+' / '+rows.length;return f}
+      tb.innerHTML=f.map(function(r){return r.h}).join('')||'<tr><td colspan="10" class="muted">没有符合的产品</td></tr>';document.getElementById('mn').textContent='显示 '+f.length+' / '+rows.length;return f}
     ['mq','mc','ml'].forEach(function(id){document.getElementById(id).addEventListener('input',draw)});draw();
     document.getElementById('mx').onclick=function(){var f=draw(),c=function(v){v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v},m=function(v){return v==null?'':(v/100).toFixed(2)};
-      var L=[['编号','分类','中文名','英文名','包装','总盘箱价','一盒件数','总盘单件','代理进价箱','卖价箱','抽成箱','散装进价','散装卖价','散装抽成','状态']].concat(f.map(function(r){var x=r.x;return[x.sku,cat[x.cat],x.name,x.en,x.pk,m(x.c),x.n||'',x.u||'',m(x.a),m(x.s),m(x.k),m(x.au),m(x.su),m(x.ku),'在售']}));
+      var L=[['编号','分类','中文名','英文名','包装','总盘箱价','一盒件数','总盘单件','代理进价箱','卖价箱','抽成箱','散装进价','散装卖价','散装抽成','散装']].concat(f.map(function(r){var x=r.x;return[x.sku,cat[x.cat],x.name,x.en,x.pk,m(x.c),x.n||'',x.u||'',m(x.a),m(x.s),m(x.k),m(x.au),m(x.su),m(x.ku),x.n?'可算':'待确认']}));
       var b=new Blob(['\ufeff'+L.map(function(r){return r.map(c).join(',')}).join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='总盘_草稿导出.csv';a.click()};
   });
 }
@@ -156,16 +169,21 @@ function masterStats(D,head){
     kpi+empty+
     '<h2 class="sh">按代理分</h2><div class="tw" style="max-height:none"><table class="dt at"><thead><tr><th>代理</th><th class="r">笔数</th><th class="r">总销售（卖价）</th><th class="r">总盘应收（进价）</th><th class="r">未付款</th><th class="r">已付款</th><th class="r">抽成</th></tr></thead><tbody>'+
     (arows||'<tr><td colspan="7" class="muted">还没有代理订单</td></tr>')+'</tbody></table></div>'+
-    '<p class="ms-note"><b>口径：</b>总销售 = 订单卖价合计（顾客下单 + 代理自己订货）。总盘应收、未付款、已付款 = 按进价，即代理应付给总盘的钱，不是顾客付给代理的卖价。抽成 = 卖价 − 进价。某行缺进价或卖价会标「有缺」，不把缺失当 0。库存数量总盘没有，不在这里编。暂无取消、退货、部分付款。</p></main>';
+    '<p class="ms-note"><b>口径：</b>总销售 = 订单卖价合计（顾客下单 + 代理自己订货）。总盘应收、未付款、已付款 = 按进价，即代理应付给总盘的钱，不是顾客付给代理的卖价。抽成 = 卖价 − 进价。某行缺进价或卖价会标「有缺」，不把缺失当 0。库存数量总盘没有，不在这里编。暂无取消、退货、部分付款。</p>'+masterFoot('stats')+'</main>';
   [].forEach.call(app.querySelectorAll('[data-p]'),function(b){b.onclick=function(){set('ms.period',b.getAttribute('data-p'));route()}});
 }
 function masterAgents(head){
   var L=agents();
   function preview(){var n=document.getElementById('nn').value.trim(),t=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value);document.getElementById('np').innerHTML=n&&t.length===4?('将开通：登录 <b>'+esc(n+t+'a')+'</b> · 顾客店 <b>/a/'+esc(n+t)+'</b>'):'请填名字和 4 位尾号';document.getElementById('nx').textContent=r==null?'抽成请填 0–100 的数字':exAt(r)}
   var rows=L.map(function(a,i){return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#1a56c4">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><input id="r'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 抽成百分比"> % <button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+'</div></td></tr>'}).join('');
+  var SL=staff();
+  var srows=SL.map(function(s,i){return '<tr><td>'+esc(s.name)+'（尾号 '+esc(s.tail)+'）</td><td><b>'+esc(s.acct)+'</b></td><td><button type="button" class="rm" data-sdel="'+i+'">删除</button></td></tr>'}).join('');
   app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开新下线和改抽成；代理自己不能做。进价固定为总盘 × 1.25，卖价 = 进价 ×（1 + 抽成率）。</span></div><table><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>抽成（改完点保存）</th></tr>'+rows+'</table>'+
   '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">抽成率（%）</label><input id="nr" type="number" min="0" max="100" step="0.01" value="40"></div></div><div class="pvw" id="np">请填名字和 4 位尾号</div><div class="ex" id="nx">'+esc(exAt(0.4))+'</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
-  '<p class="ms-note">用户名 = 名字 + 电话尾号 + a（自己订货）；顾客店链接 /a/名字+尾号（不带 a）。新开的下线保存在这台浏览器里，换设备或点「重置示例数据」会回到阿伟和 abc。</p></div></main>';
+  '<div class="af" id="staffbox"><h3>客服秘书</h3><p style="margin:0 0 10px;font-size:13px;color:#5b6b80">只有总盘可以开通。秘书用单独入口 <a href="#/cs">/cs</a> 登录（用户名 = 名字 + 尾号 + s），只能处理订单，看不到开下线和价目表。</p>'+
+  (SL.length?'<table><tr><th>秘书</th><th>登录</th><th></th></tr>'+srows+'</table>':'<p class="muted">还没有秘书。</p>')+
+  '<div class="row"><div><label for="sn">名字</label><input id="sn" placeholder="例：小芳" autocomplete="off"></div><div><label for="snt">电话尾号（后四位）</label><input id="snt" inputmode="numeric" maxlength="4" placeholder="例：0001" autocomplete="off"></div></div><div class="pvw" id="spv">请填名字和 4 位尾号</div><button class="btn gd" type="button" id="sadd">开通秘书</button></div>'+
+  '<p class="ms-note">用户名 = 名字 + 电话尾号 + a（自己订货）；顾客店链接 /a/名字+尾号（不带 a）；秘书 = 名字 + 尾号 + s，入口 /cs。新开的下线和秘书保存在这台浏览器里，重置后代理回到阿伟和 abc，秘书回到小芳0001s。</p></div>'+masterFoot('agents')+'</main>';
   ['nn','nt','nr'].forEach(function(id){document.getElementById(id).addEventListener('input',preview)});
   L.forEach(function(a,i){var inp=document.getElementById('r'+i);inp.addEventListener('input',function(){var r=parseRate(inp.value);document.getElementById('rx'+i).textContent=r==null?'抽成请填 0–100 的数字':exAt(r)})});
   [].forEach.call(app.querySelectorAll('[data-save]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-save'),r=parseRate(document.getElementById('r'+i).value);if(r==null){toast('抽成请填 0 到 100 的数字');return}var all=agents();all[i].rate=r;saveAgents(all);toast(all[i].name+' 的抽成已改为 '+ratePct(r)+'%，进价不变');masterAgents(head)}});
@@ -179,8 +197,20 @@ function masterAgents(head){
     all.push({name:n,tail:tl,acct:acct,shop:shop,rate:r});saveAgents(all);
     toast('已开通：'+acct+'，顾客店 /a/'+shop+'，抽成 '+ratePct(r)+'%');masterAgents(head);
   };
+  function sprev(){var n=document.getElementById('sn').value.trim(),tl=tail4(document.getElementById('snt').value);document.getElementById('spv').innerHTML=n&&tl.length===4?('将开通秘书登录 <b>'+esc(n+tl+'s')+'</b>，入口 /cs'):'请填名字和 4 位尾号'}
+  ['sn','snt'].forEach(function(id){document.getElementById(id).addEventListener('input',sprev)});
+  document.getElementById('sadd').onclick=function(){
+    var n=document.getElementById('sn').value.trim(),tl=tail4(document.getElementById('snt').value);
+    if(!n){toast('请填名字');return}
+    if(tl.length!==4){toast('电话尾号要 4 位数字');return}
+    var acct=n+tl+'s',all=staff();
+    if(acctTaken(acct)||all.some(function(s){return s.acct===acct})){toast('这个登录已经存在');return}
+    all.push({name:n,tail:tl,acct:acct});saveStaff(all);
+    toast('已开通秘书：'+acct+'，入口 /cs');masterAgents(head);
+  };
+  [].forEach.call(app.querySelectorAll('[data-sdel]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-sdel'),all=staff(),s=all[i];if(!s||!confirm('删除秘书 '+s.acct+'？'))return;all.splice(i,1);saveStaff(all);toast('已删除 '+s.acct);masterAgents(head)}});
 }
-function masterOrders(D,head){
+function masterOrders(D,head,asStaff){
   var os=orders().slice().reverse(),f=get('mof','open');
   var list=os.filter(function(o){
     if(f==='all')return true;
@@ -195,8 +225,8 @@ function masterOrders(D,head){
     fb('unpaid','未付款（'+os.filter(function(o){return !isPaid(o)}).length+'）')+
     fb('paid','已付款（'+os.filter(isPaid).length+'）')+
     fb('all','全部（'+os.length+'）')+
-    '<span class="n">总盘同时是客服：确认有货 → 安排出货；付款由总盘手工标记（收的是进价）。</span></div>'+
-  (list.length?list.map(function(o){return orderCard(o,'master',D)}).join(''):'<div class="oc empty">这个筛选下还没有订单。去「① 代理自己订货」或「② 顾客下单链接」下一张示例单。</div>')+'</main>';
+    '<span class="n">'+(asStaff?'你是客服秘书，只处理订单：确认有货、安排出货、标记付款（收的是进价）。':'确认有货 → 安排出货；付款手工标记（收的是进价）。秘书请走单独的客服入口登录。')+'</span></div>'+
+  (list.length?list.map(function(o){return orderCard(o,'master',D)}).join(''):'<div class="oc empty">这个筛选下还没有订单。'+(asStaff?'':'去「① 代理自己订货」或「② 顾客下单链接」下一张示例单。')+'</div>')+(asStaff?'':masterFoot('orders'))+'</main>';
   [].forEach.call(app.querySelectorAll('[data-f]'),function(b){b.onclick=function(){set('mof',b.getAttribute('data-f'));route()}});
   [].forEach.call(app.querySelectorAll('[data-st]'),function(b){b.onclick=function(){var all=orders();all.forEach(function(o){if(o.id===b.getAttribute('data-id')){o.status=b.getAttribute('data-st');(o.log=o.log||[]).push({t:tnow(),s:o.status})}});saveOrders(all);toast('已更新：'+b.getAttribute('data-st'));route()}});
   [].forEach.call(app.querySelectorAll('[data-pay]'),function(b){b.onclick=function(){var all=orders(),id=b.getAttribute('data-id'),on=b.getAttribute('data-pay')==='1';all.forEach(function(o){if(o.id===id){o.paid=on;o.paidAt=on?tnow():null;(o.log=o.log||[]).push({t:tnow(),s:on?'已付款':'未付款'})}});saveOrders(all);toast(on?'已标记付款':'已改回未付款');route()}});
@@ -246,6 +276,28 @@ function specTable(x,catName){return '<table class="sp"><tr><th>编号</th><td>'
 function catName(D,id){var c=D.cats.filter(function(c){return c.id===id})[0];return c?c.name:''}
 
 /* ======================= ① 代理自己订货 ======================= */
+function staffLogin(){
+  document.body.className='nobn';
+  app.innerHTML='<div class="lc"><h1>③ 客服（秘书）· 登录</h1><p>用户名 = 名字 + 电话尾号 + <b>s</b>（例：<b>小芳0001s</b>）。<br>由总盘开通。登录后只能处理订单，看不到开下线、改抽成和价目表。</p>'+
+  '<label for="snl">名字</label><input id="snl" placeholder="例：小芳"><label for="stl">电话尾号（后四位）</label><input id="stl" inputmode="numeric" maxlength="4" placeholder="例：0001">'+
+  '<div class="un">用户名：<b id="su">—</b></div><button class="btn gd" id="sgo" type="button">登录</button><button class="btn ol" id="sdemo" type="button">进入示例：小芳0001s</button>'+
+  '<p class="or">草稿不设密码，只为看流程。这是秘书专用入口，不是总盘，也不是代理。</p></div>';
+  function u(){var n=document.getElementById('snl').value.trim(),t=tail4(document.getElementById('stl').value);document.getElementById('su').textContent=n&&t.length===4?n+t+'s':'—';return n&&t.length===4?n+t+'s':''}
+  document.getElementById('snl').oninput=u;document.getElementById('stl').oninput=u;
+  function go(acct){var s=staffByAcct(acct);if(!s){toast('总盘还没开通这个秘书账号');return}set('sess.staff',{acct:acct,name:s.name,t:tnow()});location.hash='#/cs';route()}
+  document.getElementById('sgo').onclick=function(){var x=u();if(!x){toast('请填名字和电话后四位');return}go(x)};
+  document.getElementById('sdemo').onclick=function(){go('小芳0001s')};
+}
+function staffApp(){
+  var ss=staffSess(),S=ss&&staffByAcct(ss.acct);
+  if(!S){if(ss)del('sess.staff');return staffLogin()}
+  document.body.className='mst nobn';
+  load('master').then(function(D){
+    var head='<header class="mh"><div class="in"><h1>客服（秘书）<small>'+esc(S.name)+' · '+esc(S.acct)+' · 只处理订单</small></h1><nav><a href="#/cs" class="on">订单</a><a href="#/cs" id="slo" style="font-weight:500">退出</a></nav></div></header>';
+    masterOrders(D,head,true);
+    var lo=document.getElementById('slo');if(lo)lo.onclick=function(e){e.preventDefault();del('sess.staff');toast('已退出');location.hash='#/cs';route()};
+  });
+}
 function agentSess(){return get('sess.agent',null)}
 function agent(p,q){
   var s=agentSess();
