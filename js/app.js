@@ -72,7 +72,7 @@ function chkLabel(o){return agentChecked(o)?'代理已对':'待代理对'}
 function custSt(o){return o.status===ST2?'已安排出货':agentChecked(o)?'代理已核对':'订单已提交'}
 function custTip(o){return o.status===ST2?'本店已安排出货。':agentChecked(o)?'本店代理已核对，稍后安排出货。':'订单已提交，本店代理正在核对。'}
 function askBox(t,opt){opt=opt||{};var c=!!opt.compact;function cell(cls,title,money,miss,sub){return '<div class="'+(cls||'')+'"><i>'+title+'</i><b>'+rmSum(money,miss)+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div>'}
-  var inner=cell('','进货了多少',t.a,t.missA,'进价合计，向总盘进的货')+cell('s','卖了多少',t.s,t.missS,'卖价合计')+cell('w','还欠公司多少',t.bal,t.missB,'进价 − 已收，欠总盘')+(c?'':cell('k','抽成',t.k,t.missK,'卖价 − 进价，不是欠公司'));
+  var inner=cell('','进货了多少',t.a,t.missA,'进价合计，向总盘进的货')+cell('s','卖了多少',t.s,t.missS,'顾客散单卖价合计')+cell('w','还欠公司多少',t.bal,t.missB,'进价 − 已收，欠总盘')+(c?'':cell('k','抽成',t.k,t.missK,'只算顾客散单，不是欠公司'));
   var box='<div class="ask'+(c?' sm':'')+'">'+inner+'</div>';return opt.link?'<a class="askc" href="'+opt.link+'">'+box+'</a>':box}
 function isDemoOrder(o){return /^(A|C)-DEMO\d+$/.test(o&&o.id)}
 function hasDemoOrders(list){return (list||[]).some(isDemoOrder)}
@@ -102,7 +102,7 @@ function tshort(iso){try{return new Date(iso).toLocaleString('zh-CN',{timeZone:'
 function dueOf(o,D){var miss=false,a=0;(o.items||[]).forEach(function(it){var v=lineVals(o,it,D);if(v.a==null)miss=true;else a+=v.a});return{v:a,miss:miss}}
 function paidAmt(o,due){var L=paysOf(o),s=0;if(L.length){L.forEach(function(p){s+=(+p.amount||0)});return s}if(o.paid&&due!=null)return due;return 0}
 function isPaid(o,D){var d=dueOf(o,D);if(paysOf(o).length)return !d.miss&&paidAmt(o,d.v)>=d.v;return !!o.paid}
-function settleOf(o,D){var t={qty:0,s:0,a:0,k:0,missS:0,missA:0,missK:0};(o.items||[]).forEach(function(it){var v=lineVals(o,it,D);t.qty+=it.qty||0;if(v.s==null)t.missS++;else t.s+=v.s;if(v.a==null)t.missA++;else t.a+=v.a;if(v.k==null)t.missK++;else t.k+=v.k});var p=paidAmt(o,t.missA?null:t.a);t.paid=p;t.legacy=!!(o.paid&&!paysOf(o).length);t.missB=t.missA?1:0;t.bal=t.missA?null:t.a-p;return t}
+function settleOf(o,D){var t={qty:0,s:0,a:0,k:0,missS:0,missA:0,missK:0},sale=isCust(o);(o.items||[]).forEach(function(it){var v=lineVals(o,it,D);t.qty+=it.qty||0;if(v.a==null)t.missA++;else t.a+=v.a;if(sale){if(v.s==null)t.missS++;else t.s+=v.s;if(v.k==null)t.missK++;else t.k+=v.k}});var p=paidAmt(o,t.missA?null:t.a);t.paid=p;t.legacy=!!(o.paid&&!paysOf(o).length);t.missB=t.missA?1:0;t.bal=t.missA?null:t.a-p;return t}
 function payMethods(o){var L=paysOf(o),u=[],seen={};L.forEach(function(p){var m=p.method||'未记方式';if(!seen[m]){seen[m]=1;u.push(m)}});if(!L.length&&o.paid)u.push('已付款（未记方式）');return u}
 function payListHtml(o,canDel){var L=paysOf(o);if(!L.length)return o.paid?'<p class="tip">已付款（当时未记金额和方式）</p>':'';return '<ul class="paylog">'+L.map(function(p,i){return '<li><span>'+tshort(p.t)+' · '+esc(p.method)+(p.by?' · '+esc(p.by):'')+(p.note?' · '+esc(p.note):'')+'</span><b>'+rm(p.amount)+'</b>'+(canDel?' <button type="button" class="rm" data-pdel="'+esc(o.id)+'" data-pi="'+i+'">删除</button>':'')+'</li>'}).join('')+'</ul>'}
 function payBox(o,t,edit){var L=paysOf(o);if(!edit&&!L.length&&!o.paid)return '';var h='<div class="paybox">';if(edit)h+='<div class="payform"><input id="pa-'+o.id+'" inputmode="decimal" placeholder="收款金额" aria-label="收款金额"><select id="pm-'+o.id+'" aria-label="收款方式">'+PAY_M.map(function(m){return '<option>'+m+'</option>'}).join('')+'</select><input id="pn-'+o.id+'" placeholder="备注（选填）" aria-label="备注"><button type="button" data-prec="'+o.id+'">记录收款</button></div>';h+=payListHtml(o,edit);return h+'</div>'}
@@ -156,7 +156,7 @@ function home(){
   '<a href="#/cs"><span class="e">👩‍💼</span><b>③ 客服（秘书）</b>登录用户名：<b style="display:inline;font-size:15px">小芳0001s</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">s</b>，由总盘开通</li><li>单独入口，按代理户口，外面只看统一钱数；点进去看个别散单并备货</li><li>看不到开下线、改抽成和价目表</li></ul></a>'+
   '</div><div class="rule"><b>价钱规则（按你定的）：</b> 代理进价 = 总盘 × 1.25；卖价 = 代理进价 × 1.40；抽成 = 卖价 − 代理进价（即进价的 40%）。散装：只有包装 N/1 才算，总盘单件 = 箱价 ÷ N，再按同样规则；其他包装散装留空。金额四舍五入到 RM0.01。<br>例：HB001 8尺红炮（40/1）总盘 RM200 → 进价 RM250 · 卖价 RM350 · 抽成 RM100；散装 进价 RM6.25 · 卖价 RM8.75 · 抽成 RM2.50。</div>'+
   '<div class="rule"><b>登录规则：</b> 代理自己订货 = 名字 + 电话尾号 + <code>a</code>（<code>阿伟0901a</code>）。秘书（客服）= 名字 + 电话尾号 + <code>s</code>（<code>小芳0001s</code>），从 <code>/cs</code> 单独登录，只处理订单，由总盘开通。顾客在代理的顾客链接 <code>/a/阿伟0901</code> 登录，须填 姓名和完整电话（例：丽芬，012-345 6789）。草稿里登录不设密码，只为看流程。</div>'+
-  '<div class="rule"><b>出货与收款：</b>出货不代表已收款。代理可赊账，最高默认 RM10,000，总盘可按个别代理改；还款由秘书或总盘在该代理户口自填金额。顾客散单开了单后由该代理对。客服按代理户口，外面只看统一钱数；点进去看个别散单并备货。</div></div>';
+  '<div class="rule"><b>出货与收款：</b>出货不代表已收款。代理可赊账，最高默认 RM10,000，总盘可按个别代理改；还款由秘书或总盘在该代理户口自填金额。顾客散单开了单后由该代理对。客服按代理户口，外面只看统一钱数；点进去看个别散单并备货。自己订货没有抽成，抽成只算顾客散单。</div></div>';
 }
 
 /* ======================= 总盘 ======================= */
@@ -206,11 +206,11 @@ function masterStats(D,head){
     return '<div class="'+(cls||'')+'">'+inner+'</div>';
   }
   var kpi='<div class="kp sale">'+
-    card('hi','总销售（卖价）',T.s,T.missS,T.n,'顾客单 + 代理自己订货')+
+    card('hi','总销售（卖价）',T.s,T.missS,T.n,'只算顾客散单')+
     card('','总盘应收（进价）',T.a,T.missA,T.n,'代理应付给总盘')+
     card('w','未付款（要收余额）',T.bal,T.missB,U.n,'总盘还未收的进价','#/master/unpaid','点进去看哪个代理还没还钱 ›')+
     card('ok','已收款',T.paid,T.missB,P.n,'秘书已记的收款')+
-    card('k','抽成合计',T.k,T.missK,null,'卖价 − 进价，代理应得')+
+    card('k','抽成合计',T.k,T.missK,null,'只算顾客散单；自己订货没有抽成')+
     card('','待确认',W.s,W.missS,W.n,'卖价')+
     card('','已确认待出货',C.s,C.missS,C.n,'卖价')+
     card('','已出货',S.s,S.missS,S.n,'卖价')+
@@ -226,7 +226,7 @@ function masterStats(D,head){
     kpi+empty+
     '<h2 class="sh">按代理分</h2><div class="tw" style="max-height:none"><table class="dt at"><thead><tr><th>代理</th><th class="r">笔数</th><th class="r">总销售（卖价）</th><th class="r">总盘应收（进价）</th><th class="r">要收余额</th><th class="r">已收款</th><th class="r">抽成</th></tr></thead><tbody>'+
     (arows||'<tr><td colspan="7" class="muted">还没有代理订单</td></tr>')+'</tbody></table></div>'+
-    '<p class="ms-note"><b>口径：</b>总销售 = 订单卖价合计（顾客下单 + 代理自己订货）。总盘应收 = 进价合计（代理应付总盘）。已收款 = 秘书记下的实收金额。要收余额 = 进价 − 已收。抽成 = 卖价 − 进价。可记部分付款。某行缺数据会标「有缺」，不把缺失当 0。暂无取消、退货。</p>'+masterFoot('stats')+'</main>';
+    '<p class="ms-note"><b>口径：</b>总销售 = 顾客散单卖价合计（自己订货不算销售）。总盘应收 = 进价合计（自己订货 + 顾客散单，代理应付总盘）。已收款 = 秘书记下的实收金额。要收余额 = 进价 − 已收。抽成只算顾客散单（卖价 − 进价）；自己订货没有抽成。可记部分付款。某行缺数据会标「有缺」，不把缺失当 0。暂无取消、退货。</p>'+masterFoot('stats')+'</main>';
   [].forEach.call(app.querySelectorAll('[data-p]'),function(b){b.onclick=function(){set('ms.period',b.getAttribute('data-p'));route()}});
 }
 function masterUnpaid(D,head){
@@ -393,11 +393,13 @@ function masterOrders(D,head,asStaff,sel){
   }});
 }
 /* 订单卡：view = master | agent | cust ；D 为该角色的数据 */
-function lineVals(o,it,D){ // 统一算出 进价/卖价/抽成（顾客单只存卖价，进价与抽成从代理/总盘数据查）
+function lineVals(o,it,D){ // 统一算出 进价/卖价/抽成（顾客单只存卖价，进价从目录补；自己订货抽成为 0）
   var q=it.qty,x=D&&D.by[it.sku],u=it.mode==='unit';
   var s=it.s!=null?it.s:(x?(u?x.su:x.s):null);
   var a=it.a!=null?it.a:(x&&x.a!=null?(u?x.au:x.a):null);
-  return{s:s==null?null:s*q,a:a==null?null:a*q,k:(a==null||s==null)?null:(s-a)*q};
+  var sTot=s==null?null:s*q,aTot=a==null?null:a*q;
+  var kTot=(o&&o.kind==='agent')?0:((sTot==null||aTot==null)?null:sTot-aTot);
+  return{s:sTot,a:aTot,k:kTot};
 }
 function orderTotals(o,D){var t={qty:0,s:0,a:0,k:0};o.items.forEach(function(it){var v=lineVals(o,it,D);t.qty+=it.qty;t.s+=v.s||0;t.a+=v.a||0;t.k+=v.k||0});return t}
 function donePop(id,wish){var old=document.querySelector('.mdl.okp');if(old)old.remove();var m=document.createElement('div');m.className='mdl okp';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby','okt');m.innerHTML='<div><div class="ok">🎉</div><h3 id="okt">下单已成</h3><div class="oid"><i>单号</i><b>'+esc(id)+'</b></div><p class="pr">为了您的保障，请截图保留单号。</p><p class="wish">'+esc(wish)+'</p><button class="btn gd" type="button">我已截图</button></div>';m.querySelector('button').onclick=function(){m.remove()};document.body.appendChild(m);m.querySelector('button').focus()}
@@ -411,13 +413,14 @@ function orderCard(o,view,D){
   var chkSt=(isCust(o)&&view!=='cust')?'<span class="st '+(agentChecked(o)?'s2':'s0')+'">'+chkLabel(o)+'</span>':'';
   var packSt=(view!=='cust'&&isPacked(o))?'<span class="st s2">已备货</span>':'';
   var shipSt=view==='cust'?('<span class="st '+(o.status===ST2?'s2':agentChecked(o)?'s1':'s0')+'">'+esc(custSt(o))+'</span>'):('<span class="st '+stc(o.status)+'">'+esc(shipLabel(o))+'</span>');
-  var rows=o.items.map(function(it){var v=lineVals(o,it,D);return '<tr><td>'+it.sku+' '+esc(it.name)+'<br><small class="muted">'+modeTxt(it,isCust(o)?'cust':view)+'</small></td><td class="r">'+it.qty+'</td>'+(showCost?'<td class="r">'+rmx(v.a)+'</td>':'')+'<td class="r">'+rmx(v.s)+'</td>'+(showCost?'<td class="r">'+rmx(v.k)+'</td>':'')+'</tr>'}).join('');
+  var own=!isCust(o),showS=view==='cust'||!own,showK=showCost&&!own;
+  var rows=o.items.map(function(it){var v=lineVals(o,it,D);return '<tr><td>'+it.sku+' '+esc(it.name)+'<br><small class="muted">'+modeTxt(it,isCust(o)?'cust':view)+'</small></td><td class="r">'+it.qty+'</td>'+(showCost?'<td class="r">'+rmx(v.a)+'</td>':'')+(showS?'<td class="r">'+rmx(v.s)+'</td>':'')+(showK?'<td class="r">'+rmx(v.k)+'</td>':'')+'</tr>'}).join('');
   var h='<div class="oc"><div class="h"><b class="ono"><i>单号</i> '+esc(orderNo(o))+'</b>'+(view==='cust'?'':src)+shipSt+chkSt+packSt+paySt+'<span class="t">'+tfmt(o.time)+'</span></div>';
   if(view!=='cust')h+='<div class="t muted" style="font-size:12.5px">'+who+'</div>';
   if(o.kind==='cust'&&view!=='agent-lite')h+='<div class="note">📦 收货：<b>'+esc(o.cust.name)+'</b> · '+esc(o.cust.phone)+'<br>'+shipTxt(o.cust)+(o.cust.memo?'<br>备注：'+esc(o.cust.memo):'')+'</div>';
   if(o.kind==='agent'&&o.memo)h+='<div class="note">备注：'+esc(o.memo)+'</div>';
-  h+='<table><tr><th>产品</th><th class="r">数量</th>'+(showCost?'<th class="r">进价</th>':'')+'<th class="r">卖价</th>'+(showCost?'<th class="r">抽成</th>':'')+'</tr>'+rows+'</table>';
-  h+='<div class="sum"><span>数量 <b>'+t.qty+'</b></span>'+(showCost?'<span>进价 <b>'+rmSum(t.a,t.missA)+'</b></span>':'')+'<span>'+(view==='cust'?'订单金额':'卖价')+' <b style="color:#9b1c2c">'+rmSum(t.s,t.missS)+'</b></span>'+(showCost?'<span>抽成 <b style="color:#1b7a3a">'+rmSum(t.k,t.missK)+'</b></span><span>已交 <b>'+rm(t.paid)+'</b></span><span>要收余额 <b style="color:#875a16">'+rmx(t.bal)+'</b></span>':'')+'</div>';
+  h+='<table><tr><th>产品</th><th class="r">数量</th>'+(showCost?'<th class="r">进价</th>':'')+(showS?'<th class="r">卖价</th>':'')+(showK?'<th class="r">抽成</th>':'')+'</tr>'+rows+'</table>';
+  h+='<div class="sum"><span>数量 <b>'+t.qty+'</b></span>'+(showCost?'<span>进价 <b>'+rmSum(t.a,t.missA)+'</b></span>':'')+(showS?'<span>'+(view==='cust'?'订单金额':'卖价')+' <b style="color:#9b1c2c">'+rmSum(t.s,t.missS)+'</b></span>':'')+(showK?'<span>抽成 <b style="color:#1b7a3a">'+rmSum(t.k,t.missK)+'</b></span>':'')+(own&&showCost?'<span class="muted">无抽成</span>':'')+(showCost?'<span>已交 <b>'+rm(t.paid)+'</b></span><span>要收余额 <b style="color:#875a16">'+rmx(t.bal)+'</b></span>':'')+'</div>';
   if(view==='master'||view==='staff'){
     var ops='';
     if(!isPacked(o))ops+='<button type="button" data-pack="'+o.id+'">📦 备货</button>';
@@ -587,11 +590,11 @@ function agentOrders(D,A,f){
   var pend=myAll.filter(pendingCust);
   var list=(f==='own'?own:f==='cust'?cu:myAll).filter(function(o){return !pendingCust(o)});
   var ra=totalsOf(scoped,D),ro=totalsOf(own.filter(function(o){return period!=='month'||ymKL(o.time)===month}),D),rc=totalsOf(cu.filter(function(o){return period!=='month'||ymKL(o.time)===month}),D),cr=creditOf(A,D);
-  function src(lab,r){return '<div class="setrow"><b>'+lab+'</b><span>'+r.n+' 单</span><span class="k">抽成 '+rmSum(r.k,r.missK)+'</span><span class="w">要收 '+rmSum(r.bal,r.missB)+'</span></div>'}
+  function src(lab,r,showK){return '<div class="setrow"><b>'+lab+'</b><span>'+r.n+' 单</span>'+(showK?'<span class="k">抽成 '+rmSum(r.k,r.missK)+'</span>':'<span class="muted">无抽成</span>')+'<span class="w">要收 '+rmSum(r.bal,r.missB)+'</span></div>'}
   var bar='<div class="aper"><button type="button" data-ap="all" class="'+(period==='all'?'on':'')+'">全部</button><button type="button" data-ap="month" class="'+(period==='month'?'on':'')+'">本月（'+monthLabel(month)+'）</button><span>含自己订货和顾客散单</span></div>';
   var pendH=pend.length?'<div class="pend"><div class="acch"><h2>待对散单</h2><span>'+pend.length+' 张顾客下单，开了单后由你对</span></div>'+pend.map(function(o){return orderCard(o,'agent',D)}).join('')+'</div>':'';
   return '<div class="cp settle"><h1>账户详情</h1><p class="setsub">交帐给总盘</p>'+bar+askBox(ra)+
-  src('自己订货',ro)+src('顾客下单',rc)+
+  src('自己订货',ro,false)+src('顾客下单',rc,true)+
   '<p class="setsub">已交 '+rm(ra.paid)+' · 还欠公司是欠总盘的进价余额，不是抽成。有缺会标明，不把缺当 0。</p>'+
   '<p class="crline">赊账 '+creditTxt(cr)+'</p>'+
   pendH+
