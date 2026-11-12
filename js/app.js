@@ -6,8 +6,8 @@ var AGENT_ABC={name:'abc',tail:'1234',acct:'abc1234a',shop:'abc1234',rate:0.4};
 var DEMO_CUST={name:'丽芬',phone:'012-345 6789'};
 var LS='hbd.';
 var app=document.getElementById('app');
-var LOGO='<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#e6f5f3"/><g stroke="#1f4e79" stroke-width="3.4" stroke-linecap="round"><path d="M32 8v12M32 44v12M8 32h12M44 32h12M15 15l8.5 8.5M40.5 40.5L49 49M49 15l-8.5 8.5M23.5 40.5L15 49"/></g><circle cx="32" cy="32" r="6.5" fill="#1a9b8e"/></svg>';
-var PHSVG='<svg viewBox="0 0 64 64" aria-hidden="true"><g stroke="#b8e6e1" stroke-width="3" stroke-linecap="round" fill="none"><path d="M32 8v12M32 44v12M8 32h12M44 32h12M15 15l8.5 8.5M40.5 40.5L49 49M49 15l-8.5 8.5M23.5 40.5L15 49"/></g><circle cx="32" cy="32" r="6" fill="#1a9b8e"/></svg>';
+var LOGO='<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fceee0"/><g stroke="#9b1c2c" stroke-width="3.4" stroke-linecap="round"><path d="M32 8v12M32 44v12M8 32h12M44 32h12M15 15l8.5 8.5M40.5 40.5L49 49M49 15l-8.5 8.5M23.5 40.5L15 49"/></g><circle cx="32" cy="32" r="6.5" fill="#d4a017"/></svg>';
+var PHSVG='<svg viewBox="0 0 64 64" aria-hidden="true"><g stroke="#b8e6e1" stroke-width="3" stroke-linecap="round" fill="none"><path d="M32 8v12M32 44v12M8 32h12M44 32h12M15 15l8.5 8.5M40.5 40.5L49 49M49 15l-8.5 8.5M23.5 40.5L15 49"/></g><circle cx="32" cy="32" r="6" fill="#d4a017"/></svg>';
 
 /* ---------- utils ---------- */
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -175,12 +175,12 @@ function masterStats(D,head){
 function masterAgents(head){
   var L=agents();
   function preview(){var n=document.getElementById('nn').value.trim(),t=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value);document.getElementById('np').innerHTML=n&&t.length===4?('将开通：登录 <b>'+esc(n+t+'a')+'</b> · 顾客店 <b>/a/'+esc(n+t)+'</b>'):'请填名字和 4 位尾号';document.getElementById('nx').textContent=r==null?'抽成请填 0–100 的数字':exAt(r)}
-  var rows=L.map(function(a,i){return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#1a56c4">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><input id="r'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 抽成百分比"> % <button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+'</div></td></tr>'}).join('');
+  var rows=L.map(function(a,i){return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#9b1c2c">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><input id="r'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 抽成百分比"> % <button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+'</div></td></tr>'}).join('');
   var SL=staff();
   var srows=SL.map(function(s,i){return '<tr><td>'+esc(s.name)+'（尾号 '+esc(s.tail)+'）</td><td><b>'+esc(s.acct)+'</b></td><td><button type="button" class="rm" data-sdel="'+i+'">删除</button></td></tr>'}).join('');
   app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开新下线和改抽成；代理自己不能做。进价固定为总盘 × 1.25，卖价 = 进价 ×（1 + 抽成率）。</span></div><table><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>抽成（改完点保存）</th></tr>'+rows+'</table>'+
   '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">抽成率（%）</label><input id="nr" type="number" min="0" max="100" step="0.01" value="40"></div></div><div class="pvw" id="np">请填名字和 4 位尾号</div><div class="ex" id="nx">'+esc(exAt(0.4))+'</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
-  '<div class="af" id="staffbox"><h3>客服秘书</h3><p style="margin:0 0 10px;font-size:13px;color:#5b6b80">只有总盘可以开通。秘书用单独入口 <a href="#/cs">/cs</a> 登录（用户名 = 名字 + 尾号 + s），只能处理订单，看不到开下线和价目表。</p>'+
+  '<div class="af" id="staffbox"><h3>客服秘书</h3><p style="margin:0 0 10px;font-size:13px;color:#7a5a50">只有总盘可以开通。秘书用单独入口 <a href="#/cs">/cs</a> 登录（用户名 = 名字 + 尾号 + s），只能处理订单，看不到开下线和价目表。</p>'+
   (SL.length?'<table><tr><th>秘书</th><th>登录</th><th></th></tr>'+srows+'</table>':'<p class="muted">还没有秘书。</p>')+
   '<div class="row"><div><label for="sn">名字</label><input id="sn" placeholder="例：小芳" autocomplete="off"></div><div><label for="snt">电话尾号（后四位）</label><input id="snt" inputmode="numeric" maxlength="4" placeholder="例：0001" autocomplete="off"></div></div><div class="pvw" id="spv">请填名字和 4 位尾号</div><button class="btn gd" type="button" id="sadd">开通秘书</button></div>'+
   '<p class="ms-note">用户名 = 名字 + 电话尾号 + a（自己订货）；顾客店链接 /a/名字+尾号（不带 a）；秘书 = 名字 + 尾号 + s，入口 /cs。新开的下线和秘书保存在这台浏览器里，重置后代理回到阿伟和 abc，秘书回到小芳0001s。</p></div>'+masterFoot('agents')+'</main>';
@@ -249,7 +249,7 @@ function orderCard(o,view,D){
   if(o.kind==='cust'&&view!=='agent-lite')h+='<div class="note">📦 收货：<b>'+esc(o.cust.name)+'</b> · '+esc(o.cust.phone)+'<br>'+esc(o.cust.addr)+(o.cust.memo?'<br>备注：'+esc(o.cust.memo):'')+'</div>';
   if(o.kind==='agent'&&o.memo)h+='<div class="note">备注：'+esc(o.memo)+'</div>';
   h+='<table><tr><th>产品</th><th class="r">数量</th>'+(showCost?'<th class="r">进价</th>':'')+'<th class="r">卖价</th>'+(showCost?'<th class="r">抽成</th>':'')+'</tr>'+rows+'</table>';
-  h+='<div class="sum"><span>数量 <b>'+t.qty+'</b></span>'+(showCost?'<span>进价合计 <b>'+rm(t.a)+'</b></span>':'')+'<span>'+(view==='cust'?'订单金额':'卖价合计')+' <b style="color:#1f4e79">'+rm(t.s)+'</b></span>'+(showCost?'<span>抽成合计 <b style="color:#1b7a3a">'+rm(t.k)+'</b></span>':'')+'</div>';
+  h+='<div class="sum"><span>数量 <b>'+t.qty+'</b></span>'+(showCost?'<span>进价合计 <b>'+rm(t.a)+'</b></span>':'')+'<span>'+(view==='cust'?'订单金额':'卖价合计')+' <b style="color:#9b1c2c">'+rm(t.s)+'</b></span>'+(showCost?'<span>抽成合计 <b style="color:#1b7a3a">'+rm(t.k)+'</b></span>':'')+'</div>';
   if(view==='master'){h+='<div class="ops">'+(o.status!==ST1&&o.status!==ST2?'<button data-st="'+ST1+'" data-id="'+o.id+'">✓ 已确认有货</button>':'')+(o.status!==ST2?'<button class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>':'<span class="muted" style="font-size:12.5px">已安排出货</span>')+(isPaid(o)?'<button class="o" data-pay="0" data-id="'+o.id+'">改回未付款</button>':'<button data-pay="1" data-id="'+o.id+'">标记已付款</button>')+'</div>'}
   if(view==='cust')h+='<p class="tip">'+(o.status===ST2?'客服已安排出货。':o.status===ST1?'客服已确认有货，稍后安排出货。':'订单已提交，客服确认货后安排出货。')+'</p>';
   return h+'</div>';
@@ -306,7 +306,7 @@ function agent(p,q){
   load('agent').then(function(D0){var D=withRate(D0,A.rate);
     var base='#/agent',ck='cart.agent.'+A.acct,cats=liveCats(D),cur=p[0]==='c'?p[1]:'';
     var html=topbar({base:base,title:'代理订货 · '+A.name,sub:'① 代理自己订货 · '+A.acct+' · 草稿',cats:cats,cur:cur,q:q.get('q')});
-    html+='<div class="ann" role="note"><div class="in"><span>🧾 <b>代理自己订货</b>：向总盘下单，客服人工确认后出货</span><span>💰 价格显示 进价 / 卖价 / 抽成</span><span>🔗 顾客下单请用 <a href="#/agent/link" style="color:#1f4e79">你的顾客链接 /a/'+esc(A.shop)+'</a></span><span><a href="#" id="lo" style="color:#5b6b80">退出登录</a></span></div></div><main class="wrap">';
+    html+='<div class="ann" role="note"><div class="in"><span>🧾 <b>代理自己订货</b>：向总盘下单，客服人工确认后出货</span><span>💰 价格显示 进价 / 卖价 / 抽成</span><span>🔗 顾客下单请用 <a href="#/agent/link" style="color:#9b1c2c">你的顾客链接 /a/'+esc(A.shop)+'</a></span><span><a href="#" id="lo" style="color:#7a5a50">退出登录</a></span></div></div><main class="wrap">';
     var page=p[0]||'';
     if(page==='p')html+=agentProduct(D,A,p[1],base);
     else if(page==='cart')html+=agentCart(D,A,ck);
@@ -317,7 +317,7 @@ function agent(p,q){
     html+='</main>'+bottomNav([{h:base,t:'订货',ic:IC.home,on:!page||page==='c'||page==='p'},{h:base+'/cart',t:'订货车',ic:IC.cart,on:page==='cart',b:cartCount(get(ck,[]))||''},{h:base+'/orders',t:'我的订单',ic:IC.ord,on:page==='orders'},{h:base+'/link',t:'顾客链接',ic:IC.link,on:page==='link'}]);
     app.innerHTML=html;bindSearch(base);bindQty(app,page==='cart'?function(i){var c=get(ck,[]);c[+i.getAttribute('data-i')].qty=+i.value;set(ck,c);route()}:null);
     document.getElementById('lo').onclick=function(e){e.preventDefault();del('sess.agent');route()};
-    [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入订货车');route()}});
+    [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入 ×'+qq);route()}});
     [].forEach.call(app.querySelectorAll('.seg button'),function(b){b.onclick=function(){if(b.disabled)return;[].forEach.call(app.querySelectorAll('.seg button'),function(x){x.classList.remove('on')});b.classList.add('on')}});
     [].forEach.call(app.querySelectorAll('[data-rm]'),function(b){b.onclick=function(){var c=get(ck,[]);c.splice(+b.getAttribute('data-rm'),1);set(ck,c);route()}});
     var sub=document.getElementById('submit');if(sub)sub.onclick=function(){var c=get(ck,[]);if(!c.length)return;var o={id:oid('A'),kind:'agent',agentAcct:A.acct,shop:A.shop,time:tnow(),status:ST0A,paid:false,memo:document.getElementById('memo').value.trim(),items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,a:u?x.au:x.a,s:u?x.su:x.s}})};var all=orders();all.push(o);saveOrders(all);del(ck);location.hash='#/agent/done/'+o.id};
@@ -329,7 +329,7 @@ function agentLogin(){
   app.innerHTML='<div class="lc"><h1>① 代理自己订货 · 登录</h1><p>用户名 = 名字 + 电话尾号 + <b>a</b>（例：<b>阿伟0901a</b>）。<br>顾客在顾客店登录，须填姓名和完整电话。</p>'+
   '<label for="an">名字</label><input id="an" placeholder="例：阿伟"><label for="at">电话尾号（后四位）</label><input id="at" inputmode="numeric" maxlength="4" placeholder="例：0901">'+
   '<div class="un">用户名：<b id="au">—</b></div><button class="btn gd" id="ago" type="button">登录</button><button class="btn ol" id="ademo" type="button">进入示例：阿伟0901a</button><button class="btn ol" id="ademo2" type="button">进入：abc1234a</button>'+
-  '<p class="or">草稿不设密码；正式版需要时再加密码。开下线、改抽成只由总盘做。</p><p class="or"><a href="#/a/阿伟0901" style="color:#1f4e79">我是顾客 → ② 顾客下单链接</a></p></div>';
+  '<p class="or">草稿不设密码；正式版需要时再加密码。开下线、改抽成只由总盘做。</p><p class="or"><a href="#/a/阿伟0901" style="color:#9b1c2c">我是顾客 → ② 顾客下单链接</a></p></div>';
   function u(){var n=document.getElementById('an').value.trim(),t=tail4(document.getElementById('at').value);document.getElementById('au').textContent=n&&t.length===4?n+t+'a':'—';return n&&t.length===4?n+t+'a':''}
   document.getElementById('an').oninput=u;document.getElementById('at').oninput=u;
   function go(acct){var a=agentByAcct(acct);if(!a){toast('总盘还没开通这个下线');return}set('sess.agent',{acct:acct,t:tnow()});location.hash='#/agent';route()}
@@ -338,7 +338,7 @@ function agentLogin(){
   document.getElementById('ademo2').onclick=function(){go(AGENT_ABC.acct)};
 }
 function agentPrices(x){return '<div class="lbl">整箱 · '+esc(x.pk)+'</div><div class="ap"><div><i>进价</i><b>'+rm(x.a)+'</b></div><div class="s"><i>卖价</i><b>'+rm(x.s)+'</b></div><div class="k"><i>抽成</i><b>'+rm(x.k)+'</b></div></div>'+(x.n?'<div class="lbl">散装 · 每件（'+x.n+'/盒）</div><div class="ap u"><div><i>进价</i><b>'+rm(x.au)+'</b></div><div class="s"><i>卖价</i><b>'+rm(x.su)+'</b></div><div class="k"><i>抽成</i><b>'+rm(x.ku)+'</b></div></div>':'<div class="lbl">散装：待确认</div>')}
-function agentCard(x,base){return '<article class="pc"><a class="im" href="'+base+'/p/'+x.sku+'">'+img(x)+'<span class="cd2">'+x.sku+'</span>'+(x.v?'<span class="vb">▶ 视频</span>':'')+'</a><div class="b"><a href="'+base+'/p/'+x.sku+'"><h3>'+esc(x.name)+'</h3></a><div class="en">'+esc(x.en)+'</div>'+agentPrices(x)+'<div class="pcx"><button class="add" data-add="'+x.sku+'" data-mode="box">+ 整箱</button>'+(x.n?'<button class="add o" data-add="'+x.sku+'" data-mode="unit">+ 散装</button>':'')+'</div></div></article>'}
+function agentCard(x,base){var qid='aq-'+x.sku;return '<article class="pc"><a class="im" href="'+base+'/p/'+x.sku+'">'+img(x)+'<span class="cd2">'+x.sku+'</span>'+(x.v?'<span class="vb">▶ 视频</span>':'')+'</a><div class="b"><a href="'+base+'/p/'+x.sku+'"><h3>'+esc(x.name)+'</h3></a><div class="en">'+esc(x.en)+'</div>'+agentPrices(x)+'<div class="pcx"><div class="pcq"><span>数量</span>'+qtyBox(qid,1)+'</div><div class="pcb"><button class="add" data-add="'+x.sku+'" data-mode="box" data-qf="'+qid+'">+ 整箱</button>'+(x.n?'<button class="add o" data-add="'+x.sku+'" data-mode="unit" data-qf="'+qid+'">+ 散装</button>':'')+'</div></div></div></article>'}
 function agentStats(D,A){var my=orders().filter(function(o){return o.shop===A.shop}),r={own:0,cu:0,a:0,s:0,k:0};my.forEach(function(o){var t=orderTotals(o,D);if(o.kind==='agent'){r.own++;r.a+=t.a}else{r.cu++;r.k+=t.k;r.s+=t.s}});return r}
 function agentHome(D,A,cur,q){
   var list=filterItems(D,cur,q),h='';
@@ -392,7 +392,7 @@ function shop(slug,p,q){
     var cs0=custSess();if(cs0){var gk='cart.shop.'+A.shop+'.guest',g=get(gk,[]);if(g.length){g.forEach(function(l){addTo('cart.shop.'+A.shop+'.'+cs0.user,l.sku,l.mode,l.qty)});del(gk)}}
     var base='#/a/'+encodeURIComponent(A.shop),cs=custSess(),ck='cart.shop.'+A.shop+'.'+(cs?cs.user:'guest'),cats=liveCats(D),cur=p[0]==='c'?p[1]:'',page=p[0]||'';
     var html=topbar({base:base,title:A.name+'的烟花店',sub:'② 顾客下单 · 示例店 · /a/'+A.shop,cats:cats,cur:cur,q:q.get('q')});
-    html+='<div class="ann" role="note"><div class="in"><span>🛍️ <b>'+esc(A.name)+'的烟花店（示例）</b> · Hunter BOOM JOHOR 产品</span><span>📦 下单后客服人工确认货，再安排出货</span><span>💬 <a href="#" id="ct">联系本店代理：'+esc(A.name)+'</a></span><span>'+(cs?'👤 '+esc(cs.user)+' · <a href="#" id="clo" style="color:#5b6b80">退出</a>':'<a href="'+base+'/login" style="color:#1f4e79">登录 / 注册</a>')+'</span></div></div><main class="wrap">';
+    html+='<div class="ann" role="note"><div class="in"><span>🛍️ <b>'+esc(A.name)+'的烟花店（示例）</b> · Hunter BOOM JOHOR 产品</span><span>📦 下单后客服人工确认货，再安排出货</span><span>💬 <a href="#" id="ct">联系本店代理：'+esc(A.name)+'</a></span><span>'+(cs?'👤 '+esc(cs.user)+' · <a href="#" id="clo" style="color:#7a5a50">退出</a>':'<a href="'+base+'/login" style="color:#9b1c2c">登录 / 注册</a>')+'</span></div></div><main class="wrap">';
     if(page==='p')html+=shopProduct(D,A,p[1],base);
     else if(page==='cart')html+=shopCart(D,A,ck,base,cs);
     else if(page==='login')html+=custLogin(A,base,q.get('next'));
@@ -405,7 +405,7 @@ function shop(slug,p,q){
     bindQty(app,page==='cart'?function(i){var c=get(ck,[]);c[+i.getAttribute('data-i')].qty=+i.value;set(ck,c);route()}:null);
     document.getElementById('ct').onclick=function(e){e.preventDefault();var m=document.createElement('div');m.className='mdl';m.innerHTML='<div><h3>联系本店代理</h3><p>'+esc(A.name)+'（示例）<br><small class="muted">联系方式待代理填写，草稿不放电话。</small></p><button class="btn gd" type="button">好</button></div>';m.onclick=function(){m.remove()};document.body.appendChild(m)};
     var lo=document.getElementById('clo');if(lo)lo.onclick=function(e){e.preventDefault();del('sess.cust');route()};
-    [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入购物车');route()}});
+    [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入 ×'+qq);route()}});
     [].forEach.call(app.querySelectorAll('.seg button'),function(b){b.onclick=function(){if(b.disabled)return;[].forEach.call(app.querySelectorAll('.seg button'),function(x){x.classList.remove('on')});b.classList.add('on')}});
     [].forEach.call(app.querySelectorAll('[data-rm]'),function(b){b.onclick=function(){var c=get(ck,[]);c.splice(+b.getAttribute('data-rm'),1);set(ck,c);route()}});
     [].forEach.call(app.querySelectorAll('[data-ci] button'),function(b){b.onclick=function(){if(b.disabled)return;var i=+b.parentNode.getAttribute('data-ci'),mode=b.value,c=get(ck,[]),line=c[i];if(!line)return;var want=mode==='unit'?'unit':'box';if(line.mode===want)return;var exist=-1;c.forEach(function(l,j){if(j!==i&&l.sku===line.sku&&l.mode===want)exist=j});if(exist>=0){c[exist].qty+=line.qty;c.splice(i,1)}else line.mode=want;set(ck,c);route()}});
@@ -414,7 +414,7 @@ function shop(slug,p,q){
       var f={name:document.getElementById('fn').value.trim(),phone:document.getElementById('fp').value.trim(),addr:document.getElementById('fa').value.trim(),memo:document.getElementById('fm').value.trim()},ok=document.getElementById('fc').checked;
       var bad=[];if(!f.name)bad.push('姓名');if(!isFullPhone(f.phone))bad.push('电话');if(!f.addr)bad.push('收货地址');
       ['fn','fp','fa'].forEach(function(id){document.getElementById(id).style.borderColor=''});
-      if(bad.length){bad.forEach(function(b){document.getElementById({'姓名':'fn','电话':'fp','收货地址':'fa'}[b]).style.borderColor='#1f4e79'});toast('请填好：'+bad.join('、'));return}
+      if(bad.length){bad.forEach(function(b){document.getElementById({'姓名':'fn','电话':'fp','收货地址':'fa'}[b]).style.borderColor='#9b1c2c'});toast('请填好：'+bad.join('、'));return}
       if(!ok){toast('请勾选确认资料正确');return}
       var c=get(ck,[]);if(!c.length)return;
       var prof=get('prof.'+cs.user,{});prof.name=f.name;prof.phone=f.phone;prof.addr=f.addr;set('prof.'+cs.user,prof);
@@ -423,7 +423,7 @@ function shop(slug,p,q){
   });
 }
 function shopPrice(x){return '<div class="row"><span class="pr"><small>RM</small>'+rm(x.s).slice(2)+'</span><span class="pk">/整盒 '+esc(x.pk)+'</span></div>'+(x.su!=null?'<div class="row"><span class="pr" style="font-size:14px"><small>RM</small>'+rm(x.su).slice(2)+'</span><span class="pk">/件 散装</span></div>':'<div class="pk" style="margin-top:2px">此款只按整盒卖</div>')}
-function shopCard(x,base){return '<article class="pc"><a class="im" href="'+base+'/p/'+x.sku+'">'+img(x)+'<span class="cd2">'+x.sku+'</span>'+(x.v?'<span class="vb">▶ 视频</span>':'')+'</a><div class="b"><a href="'+base+'/p/'+x.sku+'"><h3>'+esc(x.name)+'</h3></a><div class="en">'+esc(x.en)+'</div>'+shopPrice(x)+'<div class="pcx"><button class="add" data-add="'+x.sku+'" data-mode="box">+ 整盒</button>'+(x.su!=null?'<button class="add o" data-add="'+x.sku+'" data-mode="unit">+ 散装</button>':'')+'</div></div></article>'}
+function shopCard(x,base){var qid='cq-'+x.sku;return '<article class="pc"><a class="im" href="'+base+'/p/'+x.sku+'">'+img(x)+'<span class="cd2">'+x.sku+'</span>'+(x.v?'<span class="vb">▶ 视频</span>':'')+'</a><div class="b"><a href="'+base+'/p/'+x.sku+'"><h3>'+esc(x.name)+'</h3></a><div class="en">'+esc(x.en)+'</div>'+shopPrice(x)+'<div class="pcx"><div class="pcq"><span>数量</span>'+qtyBox(qid,1)+'</div><div class="pcb"><button class="add" data-add="'+x.sku+'" data-mode="box" data-qf="'+qid+'">+ 整盒</button>'+(x.su!=null?'<button class="add o" data-add="'+x.sku+'" data-mode="unit" data-qf="'+qid+'">+ 散装</button>':'')+'</div></div></div></article>'}
 function shopHome(D,A,cur,q,base){
   var list=filterItems(D,cur,q),h='';
   if(!cur&&!q)h+='<section class="hero"><span class="tag">示例店 · 草稿</span><h1>'+esc(A.name)+'的烟花店 <em>年货烟花</em></h1><p>完整产品图和视频，价格就是卖价。登录须填姓名和完整电话，下单再填收货地址；每款可选整盒或散装（能算散装的才有）。客服确认货后安排出货。</p><div class="btns"><a class="btn gd" href="'+base+'/c/'+(D.cats[0]||{}).id+'">开始选购</a>'+(custSess()?'':'<a class="btn ol" href="'+base+'/login">登录 / 注册</a>')+'</div></section><div class="ic">'+liveCats(D).map(function(c){return '<a href="'+base+'/c/'+c.id+'"><span>'+c.icon+'</span>'+esc(c.name)+'</a>'}).join('')+'</div>';
@@ -433,7 +433,7 @@ function shopHome(D,A,cur,q,base){
 function shopProduct(D,A,sku,base){
   var x=D.by[sku];if(!x)return '<div class="empty">产品不存在。</div>';var nb=neighbors(D,x),cn=catName(D,x.cat);
   return '<nav class="bc"><a href="'+base+'">首页</a> › <a href="'+base+'/c/'+x.cat+'">'+esc(cn)+'</a> › <span>'+esc(x.name)+'</span></nav><article class="pd"><div class="im">'+img(x,'big')+'<span class="cd2">'+x.sku+'</span></div><div class="pi"><span class="cd2" style="position:static;display:inline-block">'+x.sku+'</span><h1>'+esc(x.name)+'</h1><p class="en" lang="en">'+esc(x.en)+'</p>'+
-  '<div class="pr">'+rm(x.s)+' <small style="font-size:13px;color:#5b6b80;font-weight:600">/ 整盒（'+esc(x.pk)+'）</small></div>'+(x.su!=null?'<div class="pr" style="font-size:20px">'+rm(x.su)+' <small style="font-size:13px;color:#5b6b80;font-weight:600">/ 件 散装</small></div>':'<p class="tip">此款只按整盒卖，暂无散装价。</p>')+
+  '<div class="pr">'+rm(x.s)+' <small style="font-size:13px;color:#7a5a50;font-weight:600">/ 整盒（'+esc(x.pk)+'）</small></div>'+(x.su!=null?'<div class="pr" style="font-size:20px">'+rm(x.su)+' <small style="font-size:13px;color:#7a5a50;font-weight:600">/ 件 散装</small></div>':'<p class="tip">此款只按整盒卖，暂无散装价。</p>')+
   '<div class="act"><div class="seg"><button type="button" class="on" value="box">整盒</button>'+(x.su!=null?'<button type="button" value="unit">散装</button>':'<button type="button" value="unit" disabled title="此款暂无散装价">散装</button>')+'</div>'+qtyBox('pq')+'</div><div class="act"><button class="btn gd" type="button" data-add="'+x.sku+'" data-qf="pq">加入购物车</button><a class="btn ol" href="'+base+'/cart">去结算</a></div>'+
   '<p class="note">下单后客服人工确认货，再安排出货。有问题请联系本店代理 '+esc(A.name)+'。</p>'+specTable(x,cn).replace(/<tr><th>一盒件数<\/th><td><span class="nil">[^<]*<\/span><\/td><\/tr>/,'')+'</div></article>'+videoBlock(x)+
   '<nav class="pn"><span>'+(nb.prev?'<a href="'+base+'/p/'+nb.prev.sku+'">‹ '+esc(nb.prev.name)+'</a>':'')+'</span><span>'+(nb.next?'<a href="'+base+'/p/'+nb.next.sku+'">'+esc(nb.next.name)+' ›</a>':'')+'</span></nav>'+
@@ -455,13 +455,13 @@ function shopCart(D,A,ck,base,cs){
   var c=get(ck,[]);
   if(!c.length)return '<div class="cp"><h1>购物车</h1><div class="empty">购物车是空的。<br><a class="btn gd" href="'+base+'" style="margin-top:12px">去选购</a></div></div>';
   var t=0,q=0;
-  var rows=c.map(function(l,i){var x=D.by[l.sku],u=l.mode==='unit',canU=x.su!=null,s=(u?x.su:x.s)*l.qty;t+=s;q+=l.qty;return '<div class="cl"><div class="t" style="'+(x.th?'background-image:url('+x.th+')':'')+'"></div><div><div class="n">'+x.sku+' '+esc(x.name)+'<small>'+(u?'散装 / 件 · '+rm(x.su):'整盒（'+esc(x.pk)+'）· '+rm(x.s))+'</small></div><div class="q"><div class="seg" data-ci="'+i+'"><button type="button" class="'+(u?'':'on')+'" value="box">整盒</button><button type="button" class="'+(u?'on':'')+'" value="unit"'+(canU?'':' disabled title="此款暂无散装价"')+'>散装</button></div>'+qtyBox('cq'+i,l.qty).replace('<input ','<input data-i="'+i+'" ')+'<span>小计 <b style="color:#1f4e79">'+rm(s)+'</b></span><button class="rm" data-rm="'+i+'">删除</button></div></div></div>'}).join('');
+  var rows=c.map(function(l,i){var x=D.by[l.sku],u=l.mode==='unit',canU=x.su!=null,s=(u?x.su:x.s)*l.qty;t+=s;q+=l.qty;return '<div class="cl"><div class="t" style="'+(x.th?'background-image:url('+x.th+')':'')+'"></div><div><div class="n">'+x.sku+' '+esc(x.name)+'<small>'+(u?'散装 / 件 · '+rm(x.su):'整盒（'+esc(x.pk)+'）· '+rm(x.s))+'</small></div><div class="q"><div class="seg" data-ci="'+i+'"><button type="button" class="'+(u?'':'on')+'" value="box">整盒</button><button type="button" class="'+(u?'on':'')+'" value="unit"'+(canU?'':' disabled title="此款暂无散装价"')+'>散装</button></div>'+qtyBox('cq'+i,l.qty).replace('<input ','<input data-i="'+i+'" ')+'<span>小计 <b style="color:#9b1c2c">'+rm(s)+'</b></span><button class="rm" data-rm="'+i+'">删除</button></div></div></div>'}).join('');
   var h='<div class="cp"><h1>购物车</h1>'+rows+'<div class="tot" style="grid-template-columns:1fr 1fr"><div><i>数量</i><b>'+q+'</b></div><div class="s"><i>订单金额（卖价）</i><b>'+rm(t)+'</b></div></div>';
   if(!cs){
     return h+'<a class="btn gd big" href="'+base+'/login?next=cart">登录后填写收货资料下单</a><p class="tip">登录须填姓名和完整电话号码。</p></div>';
   }
   var pr=get('prof.'+cs.user,{});
-  return h+'<h2 style="font-size:16px;color:#153a5c;margin:14px 0 4px">基本资料（必填，免得出货搞混）</h2>'+
+  return h+'<h2 style="font-size:16px;color:#6e101c;margin:14px 0 4px">基本资料（必填，免得出货搞混）</h2>'+
   '<div class="lc" style="margin:6px 0;max-width:none;box-shadow:none"><label for="fn">姓名 *</label><input id="fn" value="'+esc(pr.name||cs.name||'')+'" required><label for="fp">电话 *</label><input id="fp" type="tel" inputmode="tel" value="'+esc(pr.phone||cs.phone||'')+'" placeholder="完整电话号码" required><label for="fa">收货地址 *</label><textarea id="fa" required placeholder="门牌、路名、区、邮编、城市">'+esc(pr.addr||'')+'</textarea><label for="fm">备注（选填）</label><textarea id="fm" placeholder="例：方便收货时间"></textarea>'+
   '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input id="fc" type="checkbox" style="width:auto;margin-top:4px"> 我确认以上姓名、电话、收货地址正确'+(pr.addr?'（已带出上次资料，请再核对）':'')+'</label></div>'+
   '<button class="btn gd big" id="co" type="button">提交订单 · '+rm(t)+'</button><p class="tip">登录：'+esc(cs.user)+' · 订单记在代理 '+esc(A.name)+' 名下，送客服人工确认后安排出货。</p></div>';
