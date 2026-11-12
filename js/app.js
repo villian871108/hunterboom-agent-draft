@@ -25,7 +25,7 @@ function phoneDigits(s){return String(s||'').replace(/\D/g,'')}
 function isFullPhone(s){var d=phoneDigits(s);return d.length>=9&&d.length<=15}
 function custUser(name,phone){return name+phoneDigits(phone)}
 function seedAgents(){return [{name:'阿伟',tail:'0901',acct:'阿伟0901a',shop:'阿伟0901',rate:0.4},{name:'abc',tail:'1234',acct:'abc1234a',shop:'abc1234',rate:0.4}]}
-function agents(){var L=get('agents',null);if(!Array.isArray(L)||!L.length){L=seedAgents();set('agents',L)}L.forEach(function(a){if(a.rate==null||!isFinite(a.rate))a.rate=0.4;if(typeof a.canSetRate!=='boolean')a.canSetRate=false;if(a.rateMin==null||!isFinite(a.rateMin))a.rateMin=0;if(!a.acct)a.acct=a.name+a.tail+'a';if(!a.shop)a.shop=a.name+a.tail});return L}
+function agents(){var L=get('agents',null);if(!Array.isArray(L)||!L.length){L=seedAgents();set('agents',L)}L.forEach(function(a){if(a.rate==null||!isFinite(a.rate))a.rate=0.4;if(!a.sell||typeof a.sell!=='object'||Array.isArray(a.sell))a.sell={};if(a.rateMin==null||!isFinite(a.rateMin))a.rateMin=0;if(!a.acct)a.acct=a.name+a.tail+'a';if(!a.shop)a.shop=a.name+a.tail});return L}
 function saveAgents(L){set('agents',L)}
 function seedStaff(){return [{name:'小芳',tail:'0001',acct:'小芳0001s'}]}
 function staff(){var L=get('staff',null);if(!Array.isArray(L)){L=seedStaff();set('staff',L)}L.forEach(function(s){if(!s.acct)s.acct=s.name+s.tail+'s'});return L}
@@ -39,10 +39,17 @@ function ratePct(r){var p=Math.round((r==null?0.4:r)*10000)/100;return String(p)
 var RATE_MAX=500;
 function parseRate(s,max){var n=parseFloat(String(s==null?'':s).replace(/%/g,'').replace(/,/g,'.').trim());if(!isFinite(n)||n<0||n>(max==null?100:max))return null;return Math.round(n*100)/10000}
 function sellOf(cost,rate){return cost==null?null:Math.round(cost*(1+(rate==null?0.4:rate)))}
-function withRate(D,rate){var items=D.items.map(function(x){var y={},k;for(k in x)y[k]=x[k];y.s=sellOf(x.a,rate);y.k=(y.s==null||x.a==null)?null:y.s-x.a;y.su=sellOf(x.au,rate);y.ku=(y.su==null||x.au==null)?null:y.su-x.au;return y});var by={};items.forEach(function(x){by[x.sku]=x});return{cats:D.cats,items:items,by:by,source:D.source,generated:D.generated}}
-function shopOnly(D,rate){var W=withRate(D,rate),items=W.items.map(function(x){return{sku:x.sku,cat:x.cat,name:x.name,en:x.en,pk:x.pk,n:x.n,img:x.img,th:x.th,wh:x.wh,v:x.v,vo:x.vo,vt:x.vt,s:x.s,su:x.su}}),by={};items.forEach(function(x){by[x.sku]=x});return{cats:D.cats,items:items,by:by,source:D.source,generated:D.generated}}
-function exAg(rate){var a=25000,s=sellOf(a,rate);return '例：HB001 本钱价 RM250.00 → 建议售价 '+rm(s)+' · 利润 '+rm(s-a)}
-function exAt(rate){var a=25000,s=sellOf(a,rate);return '进价不变。例：HB001 进价 RM250.00 → 卖价 '+rm(s)+' · 抽成 '+rm(s-a)}
+function rateOf(A){return A&&A.rate!=null?A.rate:0.4}
+function minOf(A){return A&&A.rateMin!=null?A.rateMin:0}
+function floorOf(A,cost){return sellOf(cost,minOf(A))}
+function defOf(A,cost){if(cost==null)return null;return Math.max(sellOf(cost,rateOf(A)),floorOf(A,cost))}
+/* 代理当前价：单独改过的建议售价优先（不低于最低售价），否则按利润率 */
+function priceOf(A,x){var o=(A&&A.sell&&A.sell[x.sku])||{};function one(cost,ov){if(cost==null)return{s:null,c:false};var f=floorOf(A,cost);if(ov!=null&&isFinite(ov))return{s:Math.max(ov,f),c:true};return{s:defOf(A,cost),c:false}}
+  var b=one(x.a,o.box),u=one(x.au,o.unit);return{a:x.a,s:b.s,k:(b.s==null||x.a==null)?null:b.s-x.a,au:x.au,su:u.s,ku:(u.s==null||x.au==null)?null:u.s-x.au,cs:b.c,cu:u.c}}
+function withRate(D,A){if(typeof A!=='object')A={rate:A,rateMin:0,sell:{}};var items=D.items.map(function(x){var y={},k;for(k in x)y[k]=x[k];var P=priceOf(A,x);y.s=P.s;y.k=P.k;y.su=P.su;y.ku=P.ku;y.cs=P.cs;y.cu=P.cu;return y});var by={};items.forEach(function(x){by[x.sku]=x});return{cats:D.cats,items:items,by:by,source:D.source,generated:D.generated}}
+function shopOnly(D,A){var W=withRate(D,A),items=W.items.map(function(x){return{sku:x.sku,cat:x.cat,name:x.name,en:x.en,pk:x.pk,n:x.n,img:x.img,th:x.th,wh:x.wh,v:x.v,vo:x.vo,vt:x.vt,s:x.s,su:x.su}}),by={};items.forEach(function(x){by[x.sku]=x});return{cats:D.cats,items:items,by:by,source:D.source,generated:D.generated}}
+function sellCount(A){var n=0,k;for(k in (A&&A.sell)||{})n++;return n}
+function exAt(rate){var a=25000,s=sellOf(a,rate);return '例：HB001 本钱价 RM250.00 → 建议售价 '+rm(s)+' · 利润 '+rm(s-a)}
 
 /* ---------- data (三份分开的数据文件，按角色按需加载) ---------- */
 var cache={};
@@ -181,30 +188,30 @@ function masterStats(D,head){
 }
 function masterAgents(head){
   var L=agents();
-  function preview(){var n=document.getElementById('nn').value.trim(),t=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX);document.getElementById('np').innerHTML=n&&t.length===4?('将开通：登录 <b>'+esc(n+t+'a')+'</b> · 顾客店 <b>/a/'+esc(n+t)+'</b>'):'请填名字和 4 位尾号';document.getElementById('nx').textContent=r==null?'抽成请填 0–'+RATE_MAX+' 的数字':exAt(r)}
-  var rows=L.map(function(a,i){return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#9b1c2c">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><span class="gl">抽成</span><input id="r'+i+'" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 抽成百分比"> %</div><div class="gate'+(a.canSetRate?' on':'')+'"><label class="sw"><input type="checkbox" id="g'+i+'"'+(a.canSetRate?' checked':'')+'><span>关卡：允许自行调整利润</span></label><span class="mn">最低 <input id="m'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rateMin)+'" aria-label="'+esc(a.name)+' 最低利润率"> %</span></div><div class="rt"><button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+'</div></td></tr>'}).join('');
+  function preview(){var n=document.getElementById('nn').value.trim(),t=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX);document.getElementById('np').innerHTML=n&&t.length===4?('将开通：登录 <b>'+esc(n+t+'a')+'</b> · 顾客店 <b>/a/'+esc(n+t)+'</b>'):'请填名字和 4 位尾号';document.getElementById('nx').textContent=r==null?'利润率请填 0–'+RATE_MAX+' 的数字':exAt(r)}
+  var rows=L.map(function(a,i){var nc=sellCount(a);return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#9b1c2c">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><span class="gl">默认利润率</span><input id="r'+i+'" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 默认利润率"> %<span class="gl">最低利润</span><input id="m'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rateMin)+'" aria-label="'+esc(a.name)+' 最低利润率"> %<button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+(nc?' · 代理单独改价 '+nc+' 款':'')+'</div></td></tr>'}).join('');
   var SL=staff();
   var srows=SL.map(function(s,i){return '<tr><td>'+esc(s.name)+'（尾号 '+esc(s.tail)+'）</td><td><b>'+esc(s.acct)+'</b></td><td><button type="button" class="rm" data-sdel="'+i+'">删除</button></td></tr>'}).join('');
-  app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开下线。进价（本钱）固定为总盘 × 1.25，不能改。开了关卡的代理可自己调利润，不低于最低利润率。</span></div><table class="agt"><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>抽成 / 关卡（改完点保存）</th></tr>'+rows+'</table>'+
-  '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">抽成率（%）</label><input id="nr" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="40"></div></div><div class="gate"><label class="sw"><input type="checkbox" id="ng"><span>关卡：允许自行调整利润</span></label><span class="mn">最低 <input id="nm" type="number" min="0" max="100" step="0.01" value="0" aria-label="最低利润率"> %</span></div><div class="pvw" id="np">请填名字和 4 位尾号</div><div class="ex" id="nx">'+esc(exAt(0.4))+'</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
+  app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开下线。本钱价 = 总盘 × 1.25，不能改。代理可在产品卡上自己改建议售价，不能低于最低利润。</span></div><table class="agt"><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>默认利润率 / 最低利润（改完点保存）</th></tr>'+rows+'</table>'+
+  '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">默认利润率（%）</label><input id="nr" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="40"></div><div><label for="nm">最低利润（%）</label><input id="nm" type="number" min="0" max="100" step="0.01" value="0"></div></div><div class="pvw" id="np">请填名字和 4 位尾号</div><div class="ex" id="nx">'+esc(exAt(0.4))+'</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
   '<div class="af" id="staffbox"><h3>客服秘书</h3><p style="margin:0 0 10px;font-size:13px;color:#7a5a50">只有总盘可以开通。秘书用单独入口 <a href="#/cs">/cs</a> 登录（用户名 = 名字 + 尾号 + s），只能处理订单，看不到开下线和价目表。</p>'+
   (SL.length?'<table><tr><th>秘书</th><th>登录</th><th></th></tr>'+srows+'</table>':'<p class="muted">还没有秘书。</p>')+
   '<div class="row"><div><label for="sn">名字</label><input id="sn" placeholder="例：小芳" autocomplete="off"></div><div><label for="snt">电话尾号（后四位）</label><input id="snt" inputmode="numeric" maxlength="4" placeholder="例：0001" autocomplete="off"></div></div><div class="pvw" id="spv">请填名字和 4 位尾号</div><button class="btn gd" type="button" id="sadd">开通秘书</button></div>'+
   '<p class="ms-note">用户名 = 名字 + 电话尾号 + a（自己订货）；顾客店链接 /a/名字+尾号（不带 a）；秘书 = 名字 + 尾号 + s，入口 /cs。新开的下线和秘书保存在这台浏览器里，重置后代理回到阿伟和 abc，秘书回到小芳0001s。</p></div>'+masterFoot('agents')+'</main>';
   ['nn','nt','nr'].forEach(function(id){document.getElementById(id).addEventListener('input',preview)});
-  L.forEach(function(a,i){var inp=document.getElementById('r'+i);inp.addEventListener('input',function(){var r=parseRate(inp.value,RATE_MAX);document.getElementById('rx'+i).textContent=r==null?'抽成请填 0–'+RATE_MAX+' 的数字':exAt(r)})});
-  [].forEach.call(app.querySelectorAll('[data-save]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-save'),r=parseRate(document.getElementById('r'+i).value,RATE_MAX),mn=parseRate(document.getElementById('m'+i).value,100),g=document.getElementById('g'+i).checked;if(r==null){toast('抽成请填 0 到 '+RATE_MAX+' 的数字');return}if(mn==null){toast('最低利润率请填 0 到 100');return}var all=agents();all[i].rate=r;all[i].canSetRate=g;all[i].rateMin=mn;saveAgents(all);toast(all[i].name+'：抽成 '+ratePct(r)+'%，关卡'+(g?'已开（最低 '+ratePct(mn)+'%）':'关'));masterAgents(head)}});
-  L.forEach(function(a,i){var g=document.getElementById('g'+i);g.onchange=function(){g.closest('.gate').classList.toggle('on',g.checked)}});
+  L.forEach(function(a,i){var inp=document.getElementById('r'+i);inp.addEventListener('input',function(){var r=parseRate(inp.value,RATE_MAX);document.getElementById('rx'+i).textContent=r==null?'利润率请填 0–'+RATE_MAX+' 的数字':exAt(r)})});
+  [].forEach.call(app.querySelectorAll('[data-save]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-save'),r=parseRate(document.getElementById('r'+i).value,RATE_MAX),mn=parseRate(document.getElementById('m'+i).value,100);if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}if(mn==null){toast('最低利润请填 0 到 100');return}if(r<mn){toast('默认利润率不能低于最低利润');return}var all=agents();all[i].rate=r;all[i].rateMin=mn;saveAgents(all);toast(all[i].name+'：默认 '+ratePct(r)+'% · 最低 '+ratePct(mn)+'%');masterAgents(head)}});
   document.getElementById('nadd').onclick=function(){
-    var n=document.getElementById('nn').value.trim(),tl=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX),mn=parseRate(document.getElementById('nm').value,100),g=document.getElementById('ng').checked;
+    var n=document.getElementById('nn').value.trim(),tl=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX),mn=parseRate(document.getElementById('nm').value,100);
     if(!n){toast('请填名字');return}
     if(tl.length!==4){toast('电话尾号要 4 位数字');return}
-    if(r==null){toast('抽成请填 0 到 '+RATE_MAX+' 的数字');return}
-    if(mn==null){toast('最低利润率请填 0 到 100');return}
+    if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}
+    if(mn==null){toast('最低利润请填 0 到 100');return}
+    if(r<mn){toast('默认利润率不能低于最低利润');return}
     var acct=n+tl+'a',shop=n+tl,all=agents();
     if(all.some(function(a){return a.acct===acct||a.shop===shop})){toast('这个登录或店铺已经存在');return}
-    all.push({name:n,tail:tl,acct:acct,shop:shop,rate:r,canSetRate:g,rateMin:mn});saveAgents(all);
-    toast('已开通：'+acct+'，顾客店 /a/'+shop+'，抽成 '+ratePct(r)+'%');masterAgents(head);
+    all.push({name:n,tail:tl,acct:acct,shop:shop,rate:r,rateMin:mn,sell:{}});saveAgents(all);
+    toast('已开通：'+acct+'，顾客店 /a/'+shop+'，默认利润率 '+ratePct(r)+'%');masterAgents(head);
   };
   function sprev(){var n=document.getElementById('sn').value.trim(),tl=tail4(document.getElementById('snt').value);document.getElementById('spv').innerHTML=n&&tl.length===4?('将开通秘书登录 <b>'+esc(n+tl+'s')+'</b>，入口 /cs'):'请填名字和 4 位尾号'}
   ['sn','snt'].forEach(function(id){document.getElementById(id).addEventListener('input',sprev)});
@@ -350,17 +357,17 @@ function agent(p,q){
   var s=agentSess();
   if(!s||p[0]==='login')return agentLogin();
   var A=agentByAcct(s.acct);if(!A){del('sess.agent');return agentLogin()}
-  load('agent').then(function(D0){var D=withRate(D0,A.rate);
+  if(p[0]==='rate'){location.replace('#/agent');return}
+  load('agent').then(function(D0){var D=withRate(D0,A);AG={A:A,D:D};
     var base='#/agent',ck='cart.agent.'+A.acct,cats=liveCats(D),cur=p[0]==='c'?p[1]:'';
     var page=p[0]||'';
-    var html=topbar({base:base,title:'代理订货 · '+A.name,sub:A.acct,cats:cats,cur:cur,q:q.get('q'),simple:page==='link'||page==='orders'||page==='rate'});
+    var html=topbar({base:base,title:'代理订货 · '+A.name,sub:A.acct,cats:cats,cur:cur,q:q.get('q'),simple:page==='link'||page==='orders'});
     if(page!=='link')html+='<div class="ann" role="note"><div class="in"><span>向总盘下单，客服确认后出货</span><span>价格：本钱价 / 建议售价 / 利润</span><span><a href="#/agent/link" style="color:#9b1c2c">顾客链接 /a/'+esc(A.shop)+'</a></span><span><a href="#" id="lo" style="color:#7a5a50">退出</a></span></div></div>';
     html+='<main class="wrap">';
     if(page==='p')html+=agentProduct(D,A,p[1],base);
     else if(page==='cart')html+=agentCart(D,A,ck);
     else if(page==='orders')html+=agentOrders(D,A,q.get('f')||'all');
     else if(page==='link')html+=agentLink(A);
-    else if(page==='rate')html+=agentRate(A);
     else if(page==='done')html+='<div class="cp thx"><div class="e">✅</div><h1>已提交给总盘（客服）</h1><p>订单 <b>'+esc(p[1])+'</b> 状态：<span class="st s0">'+ST0A+'</span><br>客服人工确认有货后安排出货。</p><p><a class="btn gd" href="#/agent/orders">看我的订单</a> <a class="btn ol" href="#/agent">继续订货</a></p></div>';
     else html+=agentHome(D,A,cur,q.get('q'));
     html+='</main>'+bottomNav([{h:base,t:'订货',ic:IC.home,on:!page||page==='c'||page==='p'},{h:base+'/cart',t:'订货车',ic:IC.cart,on:page==='cart',b:cartCount(get(ck,[]))||''},{h:base+'/orders',t:'我的订单',ic:IC.ord,on:page==='orders'},{h:base+'/link',t:'顾客链接',ic:IC.link,on:page==='link'}]);
@@ -370,7 +377,7 @@ function agent(p,q){
     [].forEach.call(app.querySelectorAll('.seg button'),function(b){b.onclick=function(){if(b.disabled)return;[].forEach.call(app.querySelectorAll('.seg button'),function(x){x.classList.remove('on')});b.classList.add('on')}});
     [].forEach.call(app.querySelectorAll('[data-rm]'),function(b){b.onclick=function(){var c=get(ck,[]);c.splice(+b.getAttribute('data-rm'),1);set(ck,c);route()}});
     var sub=document.getElementById('submit');if(sub)sub.onclick=function(){var c=get(ck,[]);if(!c.length)return;var o={id:oid('A'),kind:'agent',agentAcct:A.acct,shop:A.shop,time:tnow(),status:ST0A,paid:false,memo:document.getElementById('memo').value.trim(),items:c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,a:u?x.au:x.a,s:u?x.su:x.s}})};var all=orders();all.push(o);saveOrders(all);del(ck);location.hash='#/agent/done/'+o.id;donePop(o.id,'祝生意兴隆，大吉大利！')};
-    if(page==='rate')bindAgentRate(A);
+    bindRateBar(A);
     var cp=document.getElementById('cpl');if(cp)cp.onclick=function(){var t=document.getElementById('lkf').textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('链接已复制')},function(){toast('请长按复制')})};
   });
 }
@@ -387,22 +394,49 @@ function agentLogin(){
   document.getElementById('ademo').onclick=function(){go(DEMO_AGENT.acct)};
   document.getElementById('ademo2').onclick=function(){go(AGENT_ABC.acct)};
 }
-function agentPrices(x){return '<div class="lbl">整箱 · '+esc(x.pk)+'</div><div class="ap"><div><i>本钱价</i><b>'+rm(x.a)+'</b></div><div class="s"><i>建议售价</i><b>'+rm(x.s)+'</b></div><div class="k"><i>利润</i><b>'+rm(x.k)+'</b></div></div>'+(x.n?'<div class="lbl">散装 · 每件（'+x.n+'/盒）</div><div class="ap u"><div><i>本钱价</i><b>'+rm(x.au)+'</b></div><div class="s"><i>建议售价</i><b>'+rm(x.su)+'</b></div><div class="k"><i>利润</i><b>'+rm(x.ku)+'</b></div></div>':'<div class="lbl">散装：待确认</div>')}
+function seBtn(x,m,mk){var u=m==='unit',v=u?x.su:x.s,c=u?x.cu:x.cs;return '<button type="button" class="se" data-se="'+x.sku+'" data-m="'+m+'" aria-label="改 '+x.sku+(u?' 散装':' 整箱')+' 建议售价">'+rm(v)+'</button>'+(mk&&c?'<em class="chg">已改</em>':'')}
+function seWrap(x,m,mk){return '<span class="sew" data-sw="'+x.sku+'|'+m+'"'+(mk?' data-mk="1"':'')+'>'+seBtn(x,m,mk)+'</span>'}
+function chgMk(x,m){var c=m==='unit'?x.cu:x.cs;return '<em class="chg" data-ck="'+x.sku+'|'+m+'"'+(c?'':' hidden')+'>已改</em>'}
+function agentPrices(x){return '<div class="lbl">整箱 · '+esc(x.pk)+'</div><div class="ap"><div><i>本钱价</i><b>'+rm(x.a)+'</b></div><div class="s"><i>建议售价</i>'+seWrap(x,'box')+'</div><div class="k"><i>利润</i><b data-pk="'+x.sku+'|box">'+rm(x.k)+'</b>'+chgMk(x,'box')+'</div></div>'+(x.n?'<div class="lbl">散装 · 每件（'+x.n+'/盒）</div><div class="ap u"><div><i>本钱价</i><b>'+rm(x.au)+'</b></div><div class="s"><i>建议售价</i>'+seWrap(x,'unit')+'</div><div class="k"><i>利润</i><b data-pk="'+x.sku+'|unit">'+rm(x.ku)+'</b>'+chgMk(x,'unit')+'</div></div>':'<div class="lbl">散装：待确认</div>')}
+function rateBar(A){var n=sellCount(A);return '<div class="rbar"><label for="rr">利润率</label><input id="rr" type="number" inputmode="decimal" min="'+ratePct(minOf(A))+'" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(rateOf(A))+'"><span>%</span><button type="button" id="rra">应用于全部</button><small>最低 '+ratePct(minOf(A))+'%'+(n?' · 单独改 '+n+' 款':'')+'</small></div>'}
+function bindRateBar(A){var b=document.getElementById('rra'),inp=document.getElementById('rr');if(!b)return;
+  inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();b.click()}};
+  b.onclick=function(){var r=parseRate(inp.value,RATE_MAX);if(r==null){toast('利润率请填 0 到 '+RATE_MAX);return}var all=agents(),me=null;all.forEach(function(a){if(a.acct===A.acct)me=a});if(!me)return;if(r<me.rateMin){toast('不能低于最低利润 '+ratePct(me.rateMin)+'%');inp.value=ratePct(me.rate);return}
+    if(sellCount(me)&&!confirm('全部产品按新利润率重算，单独改过的售价会清掉，确定？'))return;
+    me.rate=r;me.sell={};saveAgents(all);toast('全部产品已按利润率 '+ratePct(r)+'% 重算');route()}}
+/* 点建议售价直接改（代理产品卡 / 产品页） */
+var AG=null;
+function seRefresh(sku,m){var x=AG.D.by[sku];[].forEach.call(app.querySelectorAll('[data-sw="'+sku+'|'+m+'"]'),function(w){w.innerHTML=seBtn(x,m,w.hasAttribute('data-mk'))});[].forEach.call(app.querySelectorAll('[data-ck="'+sku+'|'+m+'"]'),function(e){e.hidden=!(m==='unit'?x.cu:x.cs)});[].forEach.call(app.querySelectorAll('[data-pk="'+sku+'|'+m+'"]'),function(e){e.textContent=rm(m==='unit'?x.ku:x.k)})}
+function seEdit(b){if(!AG)return;var sku=b.getAttribute('data-se'),m=b.getAttribute('data-m'),u=m==='unit',x=AG.D.by[sku];if(!x)return;var cost=u?x.au:x.a,cur=u?x.su:x.s;if(cost==null)return;
+  var w=b.parentNode,inp=document.createElement('input');inp.type='text';inp.className='sei';inp.setAttribute('inputmode','decimal');inp.setAttribute('aria-label','建议售价 RM');inp.value=(cur/100).toFixed(2);w.innerHTML='';w.appendChild(inp);inp.focus();inp.select();
+  var done=false;
+  function fin(save){if(done)return;done=true;if(!save){seRefresh(sku,m);return}
+    var v=parseRM(inp.value);if(v==null||v<=0||!String(inp.value).trim()){toast('请填正确的金额');seRefresh(sku,m);return}
+    var all=agents(),me=null;all.forEach(function(a){if(a.acct===AG.A.acct)me=a});if(!me){seRefresh(sku,m);return}
+    var f=floorOf(me,cost);if(v<f){toast('不能低于最低售价 '+rm(f));seRefresh(sku,m);return}
+    var o=me.sell[sku]||{},key=u?'unit':'box';if(v===defOf(me,cost))delete o[key];else o[key]=v;if(o.box==null&&o.unit==null)delete me.sell[sku];else me.sell[sku]=o;saveAgents(all);
+    AG.A.sell=me.sell;AG.A.rate=me.rate;AG.A.rateMin=me.rateMin;var P=priceOf(me,x);x.s=P.s;x.k=P.k;x.su=P.su;x.ku=P.ku;x.cs=P.cs;x.cu=P.cu;
+    seRefresh(sku,m);var rb=document.querySelector('.rbar small');if(rb){var n=sellCount(me);rb.textContent='最低 '+ratePct(minOf(me))+'%'+(n?' · 单独改 '+n+' 款':'')}
+    toast('建议售价 '+rm(u?P.su:P.s)+' · 利润 '+rm(u?P.ku:P.k))}
+  inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();fin(true)}else if(e.key==='Escape'){e.preventDefault();fin(false)}};
+  inp.onblur=function(){fin(true)};
+  inp.onclick=function(e){e.stopPropagation()}}
+app.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-se]');if(!b)return;e.preventDefault();e.stopPropagation();seEdit(b)});
 function agentCard(x,base){var qid='aq-'+x.sku;return '<article class="pc"><a class="im" href="'+base+'/p/'+x.sku+'">'+img(x)+'<span class="cd2">'+x.sku+'</span>'+(x.v?'<span class="vb">▶ 视频</span>':'')+'</a><div class="b"><a href="'+base+'/p/'+x.sku+'"><h3>'+esc(x.name)+'</h3></a><div class="en">'+esc(x.en)+'</div>'+agentPrices(x)+'<div class="pcx"><div class="pcq"><span>数量</span>'+qtyBox(qid,1)+'</div><div class="pcb"><button class="add" data-add="'+x.sku+'" data-mode="box" data-qf="'+qid+'">+ 整箱</button>'+(x.n?'<button class="add o" data-add="'+x.sku+'" data-mode="unit" data-qf="'+qid+'">+ 散装</button>':'')+'</div></div></div></article>'}
 function agentStats(D,A){var my=orders().filter(function(o){return o.shop===A.shop}),r={own:0,cu:0,a:0,s:0,k:0};my.forEach(function(o){var t=orderTotals(o,D);if(o.kind==='agent'){r.own++;r.a+=t.a}else{r.cu++;r.k+=t.k;r.s+=t.s}});return r}
 function agentHome(D,A,cur,q){
   var list=filterItems(D,cur,q),h='';
-  if(!cur&&!q){var st=agentStats(D,A);h+='<section class="hero ag"><span class="tag">① 代理自己订货 · 草稿</span><h1>你好，'+esc(A.name)+'。向总盘订货，<em>本钱价 · 建议售价 · 利润</em> 一目了然</h1><p>'+'利润 = 建议售价 − 本钱价（本钱价的 '+ratePct(A.rate)+'%，'+(A.canSetRate?'可自行调整':'由总盘设定')+'）。下单后客服人工确认，再安排出货。</p><div class="kv"><span>自己订货 <b>'+st.own+'</b> 单 · 进价 <b>'+rm(st.a)+'</b></span><span>顾客下单 <b>'+st.cu+'</b> 单 · 抽成 <b>'+rm(st.k)+'</b></span></div><div class="btns" style="margin-top:12px"><a class="btn gd" href="#/agent/orders">交帐给总盘</a><a class="btn ol" href="#/agent/rate">设置利润</a><a class="btn ol" href="#/agent/link">② 顾客下单链接</a></div></section>'}
-  h+='<section class="sec"><h2>'+(q?'搜索「'+esc(q)+'」':cur?esc(catName(D,cur)):'全部产品')+' <small>'+list.length+' 款'+(cur||q?'':' ')+'</small></h2>';
+  if(!cur&&!q){var st=agentStats(D,A);h+='<section class="hero ag"><span class="tag">① 代理自己订货 · 草稿</span><h1>你好，'+esc(A.name)+'。向总盘订货，<em>本钱价 · 建议售价 · 利润</em> 一目了然</h1><p>利润 = 建议售价 − 本钱价。点建议售价可直接改，顾客店跟着变。</p><div class="kv"><span>自己订货 <b>'+st.own+'</b> 单 · 进价 <b>'+rm(st.a)+'</b></span><span>顾客下单 <b>'+st.cu+'</b> 单 · 抽成 <b>'+rm(st.k)+'</b></span></div><div class="btns" style="margin-top:12px"><a class="btn gd" href="#/agent/orders">交帐给总盘</a><a class="btn ol" href="#/agent/link">② 顾客下单链接</a></div></section>'}
+  h+=rateBar(A)+'<section class="sec"><h2>'+(q?'搜索「'+esc(q)+'」':cur?esc(catName(D,cur)):'全部产品')+' <small>'+list.length+' 款'+(cur||q?'':' ')+'</small></h2>';
   return h+(list.length?'<div class="g">'+list.map(function(x){return agentCard(x,'#/agent')}).join('')+'</div>':'<div class="empty">没有找到产品</div>')+'</section>';
 }
 function neighbors(D,x){var l=D.items.filter(function(i){return i.cat===x.cat}),i=l.indexOf(x);return{prev:l[i-1],next:l[i+1],rel:l.filter(function(i){return i!==x}).slice(0,10)}}
 function agentProduct(D,A,sku,base){
   var x=D.by[sku];if(!x)return '<div class="empty">产品不存在。</div>';var nb=neighbors(D,x),cn=catName(D,x.cat);
   return '<nav class="bc"><a href="'+base+'">订货首页</a> › <a href="'+base+'/c/'+x.cat+'">'+esc(cn)+'</a> › <span>'+esc(x.name)+'</span></nav><article class="pd"><div class="im">'+img(x,'big')+'<span class="cd2">'+x.sku+'</span></div><div class="pi"><span class="cd2" style="position:static;display:inline-block">'+x.sku+'</span><h1>'+esc(x.name)+'</h1><p class="en" lang="en">'+esc(x.en)+'</p>'+
-  '<table class="pt"><tr><th>单位</th><th>本钱价</th><th>建议售价</th><th>利润</th></tr><tr><td>整箱（'+esc(x.pk)+'）</td><td>'+rm(x.a)+'</td><td class="s">'+rm(x.s)+'</td><td class="k">'+rm(x.k)+'</td></tr>'+(x.n?'<tr><td>散装 / 件</td><td>'+rm(x.au)+'</td><td class="s">'+rm(x.su)+'</td><td class="k">'+rm(x.ku)+'</td></tr>':'<tr><td>散装 / 件</td><td colspan="3" class="nil" style="text-align:center">待确认（包装 '+esc(x.pk)+' 不是 N/1）</td></tr>')+'</table>'+
+  '<table class="pt"><tr><th>单位</th><th>本钱价</th><th>建议售价</th><th>利润</th></tr><tr><td>整箱（'+esc(x.pk)+'）</td><td>'+rm(x.a)+'</td><td class="s">'+seWrap(x,'box',1)+'</td><td class="k" data-pk="'+x.sku+'|box">'+rm(x.k)+'</td></tr>'+(x.n?'<tr><td>散装 / 件</td><td>'+rm(x.au)+'</td><td class="s">'+seWrap(x,'unit',1)+'</td><td class="k" data-pk="'+x.sku+'|unit">'+rm(x.ku)+'</td></tr>':'<tr><td>散装 / 件</td><td colspan="3" class="nil" style="text-align:center">待确认（包装 '+esc(x.pk)+' 不是 N/1）</td></tr>')+'</table>'+
   '<div class="act"><div class="seg"><button type="button" class="on" value="box">整箱</button><button type="button" value="unit"'+(x.n?'':' disabled title="散装待确认"')+'>散装</button></div>'+qtyBox('pq')+'</div><div class="act"><button class="btn gd" type="button" data-add="'+x.sku+'" data-qf="pq">加入订货车</button><a class="btn ol" href="#/a/'+encodeURIComponent(A.shop)+'/p/'+x.sku+'">看顾客看到的这一款</a></div>'+
-  '<p class="tip">建议售价就是顾客看到的价；本钱价不能改。'+(A.canSetRate?'<a href="#/agent/rate" style="color:#9b1c2c">设置利润</a>':'利润由总盘设定。')+'</p>'+specTable(x,cn)+'</div></article>'+videoBlock(x)+
+  '<p class="tip">建议售价就是顾客看到的价，点一下可改；本钱价不能改。</p>'+specTable(x,cn)+'</div></article>'+videoBlock(x)+
   '<nav class="pn"><span>'+(nb.prev?'<a href="'+base+'/p/'+nb.prev.sku+'">‹ '+esc(nb.prev.name)+'</a>':'')+'</span><span>'+(nb.next?'<a href="'+base+'/p/'+nb.next.sku+'">'+esc(nb.next.name)+' ›</a>':'')+'</span></nav>'+
   (nb.rel.length?'<section class="sec"><h2>同类产品 <small>'+esc(cn)+'</small></h2><div class="g">'+nb.rel.map(function(i){return agentCard(i,base)}).join('')+'</div></section>':'');
 }
@@ -428,19 +462,6 @@ function agentOrders(D,A,f){
   '</div>';
 }
 
-function agentRate(A){
-  var h='<div class="cp lkpage rtpage"><h1>设置利润</h1><div class="cur">目前利润率 <b>'+ratePct(A.rate)+'%</b></div>';
-  if(!A.canSetRate)return h+'<p class="off">利润由总盘设定，目前不能自行调整。</p><div class="ex">'+esc(exAg(A.rate))+'</div><p class="tip">本钱价不能改。</p></div>';
-  return h+'<label for="arr">利润率（%）'+(A.rateMin>0?'<small>最低 '+ratePct(A.rateMin)+'%</small>':'')+'</label><div class="rt"><input id="arr" type="number" min="'+ratePct(A.rateMin)+'" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(A.rate)+'" inputmode="decimal"> %</div>'+
-  '<div class="ex" id="arx">'+esc(exAg(A.rate))+'</div><button class="btn gd" id="arsv" type="button">保存</button>'+
-  '<p class="tip">本钱价不能改。保存后顾客店价钱跟着变，旧订单不变。</p></div>';
-}
-function bindAgentRate(A){
-  var inp=document.getElementById('arr');if(!inp)return;
-  function chk(){var r=parseRate(inp.value,RATE_MAX);if(r==null)return {e:'利润率请填 0 到 '+RATE_MAX+' 的数字'};if(r<A.rateMin)return {e:'不能低于总盘设的最低利润率 '+ratePct(A.rateMin)+'%'};return {r:r}}
-  inp.addEventListener('input',function(){var c=chk();document.getElementById('arx').textContent=c.e||exAg(c.r)});
-  document.getElementById('arsv').onclick=function(){var all=agents(),me=null;all.forEach(function(a){if(a.acct===A.acct)me=a});if(!me||!me.canSetRate){toast('总盘已关闭关卡，不能自行调整');route();return}A.rateMin=me.rateMin;var c=chk();if(c.e){toast(c.e);return}me.rate=c.r;saveAgents(all);toast('利润率已改为 '+ratePct(c.r)+'%，顾客价已更新');route()};
-}
 function agentLink(A){
   var full=location.href.split('#')[0]+'#/a/'+A.shop;
   return '<div class="cp lkpage"><h1>顾客链接</h1><p>发给顾客。他们只看到卖价，订单记在你名下。</p>'+
@@ -454,7 +475,7 @@ function custSess(){return get('sess.cust',null)}
 function shop(slug,p,q){
   var A=agentByShop(slug);
   if(!A){app.innerHTML='<div class="lc"><h1>找不到这家店</h1><p>链接 /a/'+esc(slug)+' 不是有效的代理店铺。'+(/a$/.test(slug)?'（顾客链接没有 a，例：/a/阿伟0901）':'')+'</p><a class="btn gd" href="#/a/阿伟0901">打开示例店 /a/阿伟0901</a></div>';document.body.className='nobn';return}
-  load('agent').then(function(D0){var D=shopOnly(D0,A.rate);
+  load('agent').then(function(D0){var D=shopOnly(D0,A);
     var cs0=custSess();if(cs0){var gk='cart.shop.'+A.shop+'.guest',g=get(gk,[]);if(g.length){g.forEach(function(l){addTo('cart.shop.'+A.shop+'.'+cs0.user,l.sku,l.mode,l.qty)});del(gk)}}
     var base='#/a/'+encodeURIComponent(A.shop),cs=custSess(),ck='cart.shop.'+A.shop+'.'+(cs?cs.user:'guest'),cats=liveCats(D),cur=p[0]==='c'?p[1]:'',page=p[0]||'';
     var html=topbar({base:base,title:A.name+'的烟花店',sub:'② 顾客下单 · 示例店 · /a/'+A.shop,cats:cats,cur:cur,q:q.get('q')});

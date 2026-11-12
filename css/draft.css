@@ -290,22 +290,8 @@ a.acct:hover,a.acct:active{border-color:#d4a017;border-left-color:#9b1c2c;backgr
 .okp .wish{font-size:14px;color:#9b1c2c;margin:0 0 14px}
 .okp .btn{width:100%}
 /* 利润关卡 */
-.gate{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:6px 0;padding:6px 8px;border:1px dashed #e0cbb4;border-radius:8px;font-size:12.5px;background:#fff}
-.gate.on{border-color:#d4a017;background:#fdf6e3}
-.gate .sw{display:flex;align-items:center;gap:6px;font-weight:700;cursor:pointer;margin:0}
-.gate .sw input{width:18px;height:18px;accent-color:#9b1c2c;margin:0}
-.gate .mn{display:flex;align-items:center;gap:4px;color:#7a5a50}
-.gate .mn input{width:60px;border:1px solid #e0cbb4;border-radius:8px;padding:4px 6px;font:inherit;text-align:right}
-.af .gate .mn input{width:60px}
 .rt .gl{font-size:12px;color:#7a5a50}
-.rtpage .cur{font-size:15px;margin:0 0 12px}.rtpage .cur b{color:#9b1c2c;font-size:22px}
-.rtpage label{display:block;font-weight:700;font-size:13px;margin:0 0 6px}.rtpage label small{font-weight:400;color:#7a5a50;margin-left:8px}
-.rtpage .rt input{width:110px;font-size:18px;padding:8px 10px}
-.rtpage .ex{font-size:13.5px;color:#7a5a50;background:#fff;border:1.5px dashed #d4a017;border-radius:10px;padding:10px 12px;margin:12px 0}
-.rtpage .off{font-size:14px;color:#9b1c2c;font-weight:700;margin:0 0 8px}
-.rtpage .btn{width:100%;text-align:center}
 .hero.ag .btns{flex-wrap:wrap}
-.gate .mn{white-space:nowrap}
 @media(max-width:600px){
 .agt tr{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px dashed #f0e4d4}
 .agt td,.agt th{border-bottom:0}
@@ -318,3 +304,18 @@ a.acct:hover,a.acct:active{border-color:#d4a017;border-left-color:#9b1c2c;backgr
 .ap .k{grid-column:1/-1;display:flex;justify-content:center;align-items:baseline;gap:6px;padding:2px}
 .ap .k i{display:inline}
 }
+
+/* 点建议售价直接改 + 列表顶部利润率 */
+.se{border:0;background:none;padding:0 1px;font:inherit;font-size:13px;font-weight:700;color:var(--r,#9b1c2c);font-variant-numeric:tabular-nums;text-decoration:underline dashed #d4a017;text-underline-offset:3px;cursor:pointer}
+.ap.u .se{font-size:12px}
+.pt .se{font-size:inherit}
+.sew{display:inline-flex;align-items:baseline;gap:2px;max-width:100%}
+.sei{width:100%;min-width:0;max-width:86px;border:1.5px solid #d4a017;border-radius:6px;padding:1px 4px;font:inherit;font-size:13px;font-weight:700;color:#9b1c2c;text-align:center;background:#fff}
+.chg{font-style:normal;font-size:9.5px;color:#875a16;background:#fdf1cf;border-radius:4px;padding:0 3px;line-height:1.4}
+.rbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:12px 0 4px;padding:8px 10px;background:#fff;border:1px solid #f0dcc0;border-left:4px solid #9b1c2c;border-radius:10px;font-size:13.5px}
+.rbar label{font-weight:700;color:#9b1c2c}
+.rbar input{width:64px;border:1px solid #e0cbb4;border-radius:8px;padding:5px 6px;font:inherit;text-align:right}
+.rbar button{border:1px solid #9b1c2c;background:#9b1c2c;color:#fff;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
+.rbar small{color:#7a5a50;font-size:12px;margin-left:auto}
+.ap .chg{margin-left:4px}
+.chg[hidden]{display:none}
