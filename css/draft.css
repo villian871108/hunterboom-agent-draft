@@ -207,3 +207,15 @@ button.rm{background:none;border:0;color:#8a3a3a;font:inherit;font-size:13px;cur
 button.rm:hover{text-decoration:underline}
 #staffbox table{width:100%;margin:0 0 12px;background:#fff;border-collapse:collapse;border-radius:8px;overflow:hidden}
 #staffbox td,#staffbox th{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);font-size:13px}
+
+/* 顾客链接页：少字、好复制 */
+.lkpage{max-width:520px;margin:20px auto 40px;padding:22px 18px 28px}
+.lkpage h1{font-size:22px;margin:0 0 8px;color:var(--rd)}
+.lkpage>p{margin:0 0 16px;font-size:14px;color:var(--mut)}
+.lkpage .lk{font-size:15px;padding:14px 14px;background:#fff;border:1.5px dashed var(--gold);margin:0 0 14px;line-height:1.45}
+.lkpage .act{display:flex;gap:8px}
+.lkpage .act .btn{flex:1;margin:0;text-align:center}
+.lkpage .tip{margin:16px 0 0;font-size:12px}
+.lkpage .tip a{color:var(--mut);text-decoration:underline;text-underline-offset:2px}
+
+.top.simple .in{padding-bottom:10px}

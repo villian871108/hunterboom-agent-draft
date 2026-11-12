@@ -256,10 +256,11 @@ function orderCard(o,view,D){
 }
 
 /* ======================= 共用：店面框架 ======================= */
-function topbar(o){ // o: {home,title,sub,cats,base,q,cur}
-  return '<header class="top"><div class="in"><a class="lg" href="'+o.base+'">'+LOGO+'<span class="wm"><b>'+esc(o.title)+'</b><small>'+esc(o.sub)+'</small></span></a>'+
-  '<form class="sb" role="search" id="sf"><label class="sr" for="q">搜索产品</label><input id="q" type="search" value="'+esc(o.q||'')+'" placeholder="搜索名称或编号，如 HB001、红炮" autocomplete="off"><button type="submit">搜索</button></form>'+
-  '<nav class="tabs" aria-label="产品分类"><a href="'+o.base+'" class="'+(!o.cur?'on':'')+'">全部</a>'+o.cats.map(function(c){return '<a href="'+o.base+'/c/'+c.id+'" class="'+(o.cur===c.id?'on':'')+'">'+esc(c.name)+'</a>'}).join('')+'</nav></div></header>';
+function topbar(o){ // o: {home,title,sub,cats,base,q,cur,simple}
+  return '<header class="top'+(o.simple?' simple':'')+'"><div class="in"><a class="lg" href="'+o.base+'">'+LOGO+'<span class="wm"><b>'+esc(o.title)+'</b><small>'+esc(o.sub)+'</small></span></a>'+
+  (o.simple?'':'<form class="sb" role="search" id="sf"><label class="sr" for="q">搜索产品</label><input id="q" type="search" value="'+esc(o.q||'')+'" placeholder="搜索名称或编号，如 HB001、红炮" autocomplete="off"><button type="submit">搜索</button></form>'+
+  '<nav class="tabs" aria-label="产品分类"><a href="'+o.base+'" class="'+(!o.cur?'on':'')+'">全部</a>'+o.cats.map(function(c){return '<a href="'+o.base+'/c/'+c.id+'" class="'+(o.cur===c.id?'on':'')+'">'+esc(c.name)+'</a>'}).join('')+'</nav>')+
+  '</div></header>';
 }
 function bindSearch(base){var f=document.getElementById('sf');if(f)f.onsubmit=function(e){e.preventDefault();var q=document.getElementById('q').value.trim();location.hash=base.replace(/^#/,'#')+(q?'?q='+encodeURIComponent(q):'')}}
 function liveCats(D){var has={};D.items.forEach(function(x){has[x.cat]=1});return D.cats.filter(function(c){return has[c.id]})}
@@ -305,9 +306,10 @@ function agent(p,q){
   var A=agentByAcct(s.acct);if(!A){del('sess.agent');return agentLogin()}
   load('agent').then(function(D0){var D=withRate(D0,A.rate);
     var base='#/agent',ck='cart.agent.'+A.acct,cats=liveCats(D),cur=p[0]==='c'?p[1]:'';
-    var html=topbar({base:base,title:'代理订货 · '+A.name,sub:'① 代理自己订货 · '+A.acct+' · 草稿',cats:cats,cur:cur,q:q.get('q')});
-    html+='<div class="ann" role="note"><div class="in"><span>🧾 <b>代理自己订货</b>：向总盘下单，客服人工确认后出货</span><span>💰 价格显示 进价 / 卖价 / 抽成</span><span>🔗 顾客下单请用 <a href="#/agent/link" style="color:#9b1c2c">你的顾客链接 /a/'+esc(A.shop)+'</a></span><span><a href="#" id="lo" style="color:#7a5a50">退出登录</a></span></div></div><main class="wrap">';
     var page=p[0]||'';
+    var html=topbar({base:base,title:'代理订货 · '+A.name,sub:A.acct,cats:cats,cur:cur,q:q.get('q'),simple:page==='link'});
+    if(page!=='link')html+='<div class="ann" role="note"><div class="in"><span>向总盘下单，客服确认后出货</span><span>价格：进价 / 卖价 / 抽成</span><span><a href="#/agent/link" style="color:#9b1c2c">顾客链接 /a/'+esc(A.shop)+'</a></span><span><a href="#" id="lo" style="color:#7a5a50">退出</a></span></div></div>';
+    html+='<main class="wrap">';
     if(page==='p')html+=agentProduct(D,A,p[1],base);
     else if(page==='cart')html+=agentCart(D,A,ck);
     else if(page==='orders')html+=agentOrders(D,A,q.get('f')||'all');
@@ -316,7 +318,7 @@ function agent(p,q){
     else html+=agentHome(D,A,cur,q.get('q'));
     html+='</main>'+bottomNav([{h:base,t:'订货',ic:IC.home,on:!page||page==='c'||page==='p'},{h:base+'/cart',t:'订货车',ic:IC.cart,on:page==='cart',b:cartCount(get(ck,[]))||''},{h:base+'/orders',t:'我的订单',ic:IC.ord,on:page==='orders'},{h:base+'/link',t:'顾客链接',ic:IC.link,on:page==='link'}]);
     app.innerHTML=html;bindSearch(base);bindQty(app,page==='cart'?function(i){var c=get(ck,[]);c[+i.getAttribute('data-i')].qty=+i.value;set(ck,c);route()}:null);
-    document.getElementById('lo').onclick=function(e){e.preventDefault();del('sess.agent');route()};
+    var lo=document.getElementById('lo');if(lo)lo.onclick=function(e){e.preventDefault();del('sess.agent');route()};
     [].forEach.call(app.querySelectorAll('[data-add]'),function(b){b.onclick=function(){var qi=b.getAttribute('data-qf'),qq=qi?Math.max(1,parseInt(document.getElementById(qi).value,10)||1):1;var mode=b.getAttribute('data-mode')||(app.querySelector('.seg .on')||{}).value||'box';addTo(ck,b.getAttribute('data-add'),mode,qq);toast('已加入 ×'+qq);route()}});
     [].forEach.call(app.querySelectorAll('.seg button'),function(b){b.onclick=function(){if(b.disabled)return;[].forEach.call(app.querySelectorAll('.seg button'),function(x){x.classList.remove('on')});b.classList.add('on')}});
     [].forEach.call(app.querySelectorAll('[data-rm]'),function(b){b.onclick=function(){var c=get(ck,[]);c.splice(+b.getAttribute('data-rm'),1);set(ck,c);route()}});
@@ -376,11 +378,10 @@ function agentOrders(D,A,f){
 }
 function agentLink(A){
   var full=location.href.split('#')[0]+'#/a/'+A.shop;
-  return '<div class="cp"><h1>② 顾客下单链接</h1><p>把这个链接发给你的顾客。顾客打开就是「'+esc(A.name)+'的烟花店」，只看到卖价；他们下的单会记在你名下，你在「我的订单」看得到抽成。</p>'+
-  '<div style="font-size:13px;font-weight:700">正式版链接样子</div><div class="lk">/a/'+esc(A.shop)+'</div><div style="font-size:13px;font-weight:700">草稿预览链接</div><div class="lk" id="lkf">'+esc(full)+'</div>'+
-  '<div class="act"><button class="btn ol" id="cpl" type="button">复制链接</button><a class="btn gd" href="#/a/'+encodeURIComponent(A.shop)+'">打开顾客看到的店</a></div>'+
-  '<div class="two"><div class="y"><b>顾客看得到</b><ul><li>完整产品图、视频、分类、包装</li><li>卖价（可按整盒或散装选；包装不是 N/1 的暂无散装）</li><li>自己的订单和状态</li></ul></div><div class="n"><b>顾客看不到</b><ul><li>总盘价、代理进价</li><li>抽成</li><li>别的顾客的订单</li></ul></div></div>'+
-  '<p class="tip">链接 /a/'+esc(A.shop)+' 没有 a；你自己订货登录用 '+esc(A.acct)+'。顾客下单要填 姓名、电话、收货地址，免得出货搞混。</p></div>';
+  return '<div class="cp lkpage"><h1>顾客链接</h1><p>发给顾客。他们只看到卖价，订单记在你名下。</p>'+
+  '<div class="lk" id="lkf">'+esc(full)+'</div>'+
+  '<div class="act"><button class="btn gd" id="cpl" type="button">复制链接</button><a class="btn ol" href="#/a/'+encodeURIComponent(A.shop)+'">打开店铺</a></div>'+
+  '<p class="tip">你自己订货登录是 '+esc(A.acct)+'，不要发给顾客。 <a href="#" id="lo">退出</a></p></div>';
 }
 
 /* ======================= ② 顾客下单链接 ======================= */
