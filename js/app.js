@@ -25,9 +25,38 @@ function orderNo(o){if(o&&o.id)return String(o.id);var pre=(o&&o.kind==='cust')?
 function tail4(s){var d=String(s||'').replace(/\D/g,'');return d.slice(-4)}
 function phoneDigits(s){return String(s||'').replace(/\D/g,'')}
 function isFullPhone(s){var d=phoneDigits(s);return d.length>=9&&d.length<=15}
+function parseWa(s){return isFullPhone(s)?String(s||'').trim():null}
+function waIntl(s){var d=phoneDigits(s);if(!d)return '';if(d.charAt(0)==='0')return '60'+d.slice(1);if(d.indexOf('60')===0)return d;return '60'+d}
+function backWa(){var v=get('backWa','');return typeof v==='string'?v:''}
+function waHref(num,text){var d=parseWa(num)?waIntl(num):'';return d?('https://wa.me/'+d+'?text='+encodeURIComponent(text)) :''}
+function isCustPaid(o){return !!(o&&isCust(o)&&o.custPaid)}
+function waMsg(o,A){
+  var L=['Hunter BOOM JOHOR 顾客下单','单号：'+orderNo(o),'时间：'+tfmt(o.time),'代理：'+(A?(A.name+(A.shop?'（'+A.shop+'）':'')):(o&&o.shop?o.shop:'未记'))];
+  var c=(o&&o.cust)||{};
+  L.push('顾客：'+(c.name||'')+' · '+(c.phone||''));
+  if(c.ship==='post')L.push('送货：邮寄'+(c.addr?' · '+c.addr:''));
+  else if(c.ship==='agent')L.push('送货：代理送货');
+  else L.push('送货：'+(c.ship||'未记'));
+  if(c.memo)L.push('备注：'+c.memo);
+  L.push('货品：');
+  var sum=0,miss=0;
+  (o&&o.items||[]).forEach(function(it){
+    var s=it.s!=null?it.s*it.qty:null;
+    if(s==null)miss++;else sum+=s;
+    var mode=it.mode==='unit'?'散装（件）':('整盒'+(it.pk?'（'+it.pk+'）':''));
+    L.push('- '+(it.sku||'')+' '+(it.name||'')+' · '+mode+' × '+(it.qty||0)+(s!=null?' · '+rm(s):' · 卖价有缺'));
+  });
+  L.push('卖价合计：'+(miss?'有缺（不把缺当 0）':rm(sum)));
+  return L.join('\n');
+}
+function waActs(o){
+  var A=(o&&(agentByAcct(o.agentAcct||'')||agentByShop(o.shop||'')))||null,txt=waMsg(o,A);
+  function item(lab,num,miss){var href=waHref(num,txt);return href?('<a class="btn wa" target="_blank" rel="noopener" href="'+esc(href)+'">'+lab+'</a>'):('<p class="wamiss"><b>'+lab+'</b> 有缺：'+miss+'</p>')}
+  return '<div class="wasend"><p class="watip">可把同一张单发到代理和后台 WhatsApp（含单号、货、卖价、收货，不含进价）。草稿会打开 WhatsApp 预填，再点发送。</p>'+item('发给代理 WhatsApp',A&&A.wa,'代理还未填 WhatsApp')+item('发给后台 WhatsApp',backWa(),'总盘还未设后台通知号码')+'</div>';
+}
 function custUser(name,phone){return name+phoneDigits(phone)}
 function seedAgents(){return [{name:'阿伟',tail:'0901',acct:'阿伟0901a',shop:'阿伟0901',rate:0.4},{name:'abc',tail:'1234',acct:'abc1234a',shop:'abc1234',rate:0.4}]}
-function agents(){var L=get('agents',null);if(!Array.isArray(L)||!L.length){L=seedAgents();set('agents',L)}L.forEach(function(a){if(a.rate==null||!isFinite(a.rate))a.rate=0.4;if(!a.sell||typeof a.sell!=='object'||Array.isArray(a.sell))a.sell={};if(a.rateMin==null||!isFinite(a.rateMin))a.rateMin=0;if(a.creditMax==null||!isFinite(a.creditMax))a.creditMax=CREDIT_DEF;if(!a.acct)a.acct=a.name+a.tail+'a';if(!a.shop)a.shop=a.name+a.tail});return L}
+function agents(){var L=get('agents',null);if(!Array.isArray(L)||!L.length){L=seedAgents();set('agents',L)}L.forEach(function(a){if(a.rate==null||!isFinite(a.rate))a.rate=0.4;if(!a.sell||typeof a.sell!=='object'||Array.isArray(a.sell))a.sell={};if(a.rateMin==null||!isFinite(a.rateMin))a.rateMin=0;if(a.creditMax==null||!isFinite(a.creditMax))a.creditMax=CREDIT_DEF;if(!a.acct)a.acct=a.name+a.tail+'a';if(!a.shop)a.shop=a.name+a.tail;if(a.wa==null)a.wa=''});return L}
 function saveAgents(L){set('agents',L)}
 function seedStaff(){return [{name:'小芳',tail:'0001',acct:'小芳0001s'}]}
 function staff(){var L=get('staff',null);if(!Array.isArray(L)){L=seedStaff();set('staff',L)}L.forEach(function(s){if(!s.acct)s.acct=s.name+s.tail+'s'});return L}
@@ -156,7 +185,7 @@ function home(){
   '<a href="#/cs"><span class="e">👩‍💼</span><b>③ 客服（秘书）</b>登录用户名：<b style="display:inline;font-size:15px">小芳0001s</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">s</b>，由总盘开通</li><li>单独入口，按代理户口，外面只看统一钱数；点进去看个别散单并备货</li><li>看不到开下线、改抽成和价目表</li></ul></a>'+
   '</div><div class="rule"><b>价钱规则（按你定的）：</b> 代理进价 = 总盘 × 1.25；卖价 = 代理进价 × 1.40；抽成 = 卖价 − 代理进价（即进价的 40%）。散装：只有包装 N/1 才算，总盘单件 = 箱价 ÷ N，再按同样规则；其他包装散装留空。金额四舍五入到 RM0.01。<br>例：HB001 8尺红炮（40/1）总盘 RM200 → 进价 RM250 · 卖价 RM350 · 抽成 RM100；散装 进价 RM6.25 · 卖价 RM8.75 · 抽成 RM2.50。</div>'+
   '<div class="rule"><b>登录规则：</b> 代理自己订货 = 名字 + 电话尾号 + <code>a</code>（<code>阿伟0901a</code>）。秘书（客服）= 名字 + 电话尾号 + <code>s</code>（<code>小芳0001s</code>），从 <code>/cs</code> 单独登录，只处理订单，由总盘开通。顾客在代理的顾客链接 <code>/a/阿伟0901</code> 登录，须填 姓名和完整电话（例：丽芬，012-345 6789）。草稿里登录不设密码，只为看流程。</div>'+
-  '<div class="rule"><b>出货与收款：</b>出货不代表已收款。代理可赊账，最高默认 RM10,000，总盘可按个别代理改；还款由秘书或总盘在该代理户口自填金额。顾客散单开了单后由该代理对。客服按代理户口，外面只看统一钱数；点进去看个别散单并备货。自己订货没有抽成，抽成只算顾客散单。</div></div>';
+  '<div class="rule"><b>出货与收款：</b>出货不代表已收款。代理可赊账，最高默认 RM10,000，总盘可按个别代理改；还款由秘书或总盘在该代理户口自填金额。顾客散单开了单后由该代理对。客服按代理户口，外面只看统一钱数；点进去看个别散单并备货。自己订货没有抽成，抽成只算顾客散单。顾客散单没有赊账；代理向顾客收了钱可标记已付款（这不等于已交给总盘）。开下线要填代理通知 WhatsApp，总盘要填后台通知 WhatsApp；顾客下单成功后可把同一张单（含单号、货、卖价、收货，不含进价）发到这两个号码。草稿是打开 WhatsApp 预填再点发送。</div></div>';
 }
 
 /* ======================= 总盘 ======================= */
@@ -258,30 +287,33 @@ function masterUnpaid(D,head){
 function masterAgents(head,D){
   var L=agents();
   function preview(){var n=document.getElementById('nn').value.trim(),t=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX);document.getElementById('np').innerHTML=n&&t.length===4?('将开通：登录 <b>'+esc(n+t+'a')+'</b> · 顾客店 <b>/a/'+esc(n+t)+'</b>'):'请填名字和 4 位尾号';document.getElementById('nx').textContent=r==null?'利润率请填 0–'+RATE_MAX+' 的数字':exAt(r)}
-  var rows=L.map(function(a,i){var nc=sellCount(a),cr=creditOf(a,D),cm=creditMaxOf(a);return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#9b1c2c">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><span class="gl">默认利润率</span><input id="r'+i+'" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 默认利润率"> %<span class="gl">最低利润</span><input id="m'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rateMin)+'" aria-label="'+esc(a.name)+' 最低利润率"> %<span class="gl">赊账最高（RM）</span><input id="c'+i+'" inputmode="decimal" value="'+(cm/100).toFixed(2)+'" aria-label="'+esc(a.name)+' 赊账最高"><button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+(nc?' · 代理单独改价 '+nc+' 款':'')+'</div><div class="ex crline">'+creditTxt(cr)+'</div></td></tr>'}).join('');
+  var rows=L.map(function(a,i){var nc=sellCount(a),cr=creditOf(a,D),cm=creditMaxOf(a);return '<tr><td>'+esc(a.name)+'（尾号 '+esc(a.tail)+'）</td><td><b>'+esc(a.acct)+'</b></td><td><a href="#/a/'+encodeURIComponent(a.shop)+'" style="color:#9b1c2c">/a/'+esc(a.shop)+'</a></td><td><div class="rt"><span class="gl">默认利润率</span><input id="r'+i+'" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="'+ratePct(a.rate)+'" aria-label="'+esc(a.name)+' 默认利润率"> %<span class="gl">最低利润</span><input id="m'+i+'" type="number" min="0" max="100" step="0.01" value="'+ratePct(a.rateMin)+'" aria-label="'+esc(a.name)+' 最低利润率"> %<span class="gl">赊账最高（RM）</span><input id="c'+i+'" inputmode="decimal" value="'+(cm/100).toFixed(2)+'" aria-label="'+esc(a.name)+' 赊账最高"><span class="gl">通知 WhatsApp</span><input id="w'+i+'" inputmode="tel" value="'+esc(a.wa||'')+'" placeholder="有缺" aria-label="'+esc(a.name)+' 通知 WhatsApp"><button type="button" class="sv" data-save="'+i+'">保存</button></div><div class="ex" id="rx'+i+'">'+esc(exAt(a.rate))+(nc?' · 代理单独改价 '+nc+' 款':'')+'</div><div class="ex crline">'+creditTxt(cr)+'</div>'+(a.wa?'':'<div class="ex">通知 WhatsApp：<span class="miss">有缺</span>（示例代理先不填真实号码）</div>')+'</td></tr>'}).join('');
   var SL=staff();
   var srows=SL.map(function(s,i){return '<tr><td>'+esc(s.name)+'（尾号 '+esc(s.tail)+'）</td><td><b>'+esc(s.acct)+'</b></td><td><button type="button" class="rm" data-sdel="'+i+'">删除</button></td></tr>'}).join('');
-  app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开下线。本钱价 = 总盘 × 1.25，不能改。代理可在产品卡上自己改建议售价，不能低于最低利润。每个代理可赊账，最高默认 RM10,000，可单独改。</span></div><table class="agt"><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>默认利润率 / 最低利润 / 赊账最高（改完点保存）</th></tr>'+rows+'</table>'+
-  '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">默认利润率（%）</label><input id="nr" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="40"></div><div><label for="nm">最低利润（%）</label><input id="nm" type="number" min="0" max="100" step="0.01" value="0"></div><div><label for="nc">赊账最高（RM）</label><input id="nc" inputmode="decimal" value="10000"></div></div><div class="pvw" id="np">请填名字和 4 位尾号</div><div class="ex" id="nx">'+esc(exAt(0.4))+' · 赊账最高默认 RM10,000.00</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
+  app.innerHTML=head+'<main class="mw"><div class="oc"><div class="h"><b>代理名单</b><span class="t">只有总盘可以开下线。本钱价 = 总盘 × 1.25，不能改。代理可在产品卡上自己改建议售价，不能低于最低利润。每个代理可赊账，最高默认 RM10,000，可单独改。开下线必须填代理通知 WhatsApp。本页填写后台通知 WhatsApp。</span></div><table class="agt"><tr><th>代理</th><th>自己订货登录</th><th>顾客下单链接</th><th>默认利润率 / 最低利润 / 赊账最高 / 通知 WhatsApp（改完点保存）</th></tr>'+rows+'</table>'+
+  '<div class="af"><h3>新增代理（开下线）</h3><div class="row"><div><label for="nn">名字</label><input id="nn" placeholder="例：阿伟" autocomplete="off"></div><div><label for="nt">电话尾号（后四位）</label><input id="nt" inputmode="numeric" maxlength="4" placeholder="例：0901" autocomplete="off"></div><div><label for="nr">默认利润率（%）</label><input id="nr" type="number" min="0" max="'+RATE_MAX+'" step="0.01" value="40"></div><div><label for="nm">最低利润（%）</label><input id="nm" type="number" min="0" max="100" step="0.01" value="0"></div><div><label for="nc">赊账最高（RM）</label><input id="nc" inputmode="decimal" value="10000"></div><div><label for="nw">通知 WhatsApp *</label><input id="nw" inputmode="tel" placeholder="代理收顾客下单通知，例：012-345 6789" autocomplete="off" required></div></div><div class="pvw" id="np">请填名字、4 位尾号和通知 WhatsApp</div><div class="ex" id="nx">'+esc(exAt(0.4))+' · 赊账最高默认 RM10,000.00 · 通知 WhatsApp 必填</div><button class="btn gd" type="button" id="nadd">开通下线</button></div>'+
+  '<div class="af" id="bwabox"><h3>后台通知 WhatsApp</h3><p style="margin:0 0 8px;font-size:13px;color:#7a5a50">顾客下单成功后，同一张单（含单号、货、卖价、收货，不含进价）可发到这个号码。草稿是打开 WhatsApp 预填再点发送。先留空则通知会提示未设，不会用公开订货号代替。</p><div class="bw"><input id="bwa" inputmode="tel" value="'+esc(backWa())+'" placeholder="马来西亚手机，例：012-345 6789" aria-label="后台通知 WhatsApp"><button type="button" id="bwas">保存后台号码</button></div><div class="ex" id="bwx">'+(backWa()?('当前已设：'+esc(backWa())):'当前：<span class="miss">有缺</span>（还未设后台通知号码）')+'</div></div>'+
   '<div class="af" id="staffbox"><h3>客服秘书</h3><p style="margin:0 0 10px;font-size:13px;color:#7a5a50">只有总盘可以开通。秘书用单独入口 <a href="#/cs">/cs</a> 登录（用户名 = 名字 + 尾号 + s），只能处理订单，看不到开下线和价目表。</p>'+
   (SL.length?'<table><tr><th>秘书</th><th>登录</th><th></th></tr>'+srows+'</table>':'<p class="muted">还没有秘书。</p>')+
   '<div class="row"><div><label for="sn">名字</label><input id="sn" placeholder="例：小芳" autocomplete="off"></div><div><label for="snt">电话尾号（后四位）</label><input id="snt" inputmode="numeric" maxlength="4" placeholder="例：0001" autocomplete="off"></div></div><div class="pvw" id="spv">请填名字和 4 位尾号</div><button class="btn gd" type="button" id="sadd">开通秘书</button></div>'+
   '<p class="ms-note">用户名 = 名字 + 电话尾号 + a（自己订货）；顾客店链接 /a/名字+尾号（不带 a）；秘书 = 名字 + 尾号 + s，入口 /cs。新开的下线和秘书保存在这台浏览器里，重置后代理回到阿伟和 abc，秘书回到小芳0001s。</p></div>'+masterFoot('agents')+'</main>';
   ['nn','nt','nr'].forEach(function(id){document.getElementById(id).addEventListener('input',preview)});
   L.forEach(function(a,i){var inp=document.getElementById('r'+i);inp.addEventListener('input',function(){var r=parseRate(inp.value,RATE_MAX);document.getElementById('rx'+i).textContent=r==null?'利润率请填 0–'+RATE_MAX+' 的数字':exAt(r)})});
-  [].forEach.call(app.querySelectorAll('[data-save]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-save'),r=parseRate(document.getElementById('r'+i).value,RATE_MAX),mn=parseRate(document.getElementById('m'+i).value,100),cm=parseCredit(document.getElementById('c'+i).value);if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}if(mn==null){toast('最低利润请填 0 到 100');return}if(r<mn){toast('默认利润率不能低于最低利润');return}if(cm==null){toast('赊账最高请填 0 到 RM1,000,000 的金额');return}var all=agents();all[i].rate=r;all[i].rateMin=mn;all[i].creditMax=cm;saveAgents(all);toast(all[i].name+'：默认 '+ratePct(r)+'% · 最低 '+ratePct(mn)+'% · 赊账最高 '+rm(cm));masterAgents(head,D)}});
+  [].forEach.call(app.querySelectorAll('[data-save]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-save'),r=parseRate(document.getElementById('r'+i).value,RATE_MAX),mn=parseRate(document.getElementById('m'+i).value,100),cm=parseCredit(document.getElementById('c'+i).value),wa=document.getElementById('w'+i).value.trim();if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}if(mn==null){toast('最低利润请填 0 到 100');return}if(r<mn){toast('默认利润率不能低于最低利润');return}if(cm==null){toast('赊账最高请填 0 到 RM1,000,000 的金额');return}if(wa&&!parseWa(wa)){toast('通知 WhatsApp 请填马来西亚手机号码（01… 或 60…，9–15 位数字）');return}var all=agents();all[i].rate=r;all[i].rateMin=mn;all[i].creditMax=cm;all[i].wa=wa;saveAgents(all);toast(all[i].name+'：默认 '+ratePct(r)+'% · 最低 '+ratePct(mn)+'% · 赊账最高 '+rm(cm)+(wa?' · 通知 WhatsApp 已存':' · 通知 WhatsApp 有缺'));masterAgents(head,D)}});
+  document.getElementById('bwas').onclick=function(){var wa=document.getElementById('bwa').value.trim();if(wa&&!parseWa(wa)){toast('后台通知 WhatsApp 请填马来西亚手机号码（01… 或 60…，9–15 位数字）');return}set('backWa',wa);toast(wa?'已保存后台通知 WhatsApp':'已清空：后台通知号码有缺');masterAgents(head,D)};
   document.getElementById('nadd').onclick=function(){
-    var n=document.getElementById('nn').value.trim(),tl=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX),mn=parseRate(document.getElementById('nm').value,100),cm=parseCredit(document.getElementById('nc').value);
+    var n=document.getElementById('nn').value.trim(),tl=tail4(document.getElementById('nt').value),r=parseRate(document.getElementById('nr').value,RATE_MAX),mn=parseRate(document.getElementById('nm').value,100),cm=parseCredit(document.getElementById('nc').value),wa=document.getElementById('nw').value.trim();
     if(!n){toast('请填名字');return}
     if(tl.length!==4){toast('电话尾号要 4 位数字');return}
     if(r==null){toast('默认利润率请填 0 到 '+RATE_MAX+' 的数字');return}
     if(mn==null){toast('最低利润请填 0 到 100');return}
     if(r<mn){toast('默认利润率不能低于最低利润');return}
     if(cm==null){toast('赊账最高请填 0 到 RM1,000,000 的金额');return}
+    if(!parseWa(wa)){toast('请填代理通知 WhatsApp（马来西亚手机，01… 或 60…，9–15 位数字）');return}
     var acct=n+tl+'a',shop=n+tl,all=agents();
     if(all.some(function(a){return a.acct===acct||a.shop===shop})){toast('这个登录或店铺已经存在');return}
-    all.push({name:n,tail:tl,acct:acct,shop:shop,rate:r,rateMin:mn,creditMax:cm,sell:{}});saveAgents(all);
-    toast('已开通：'+acct+'，顾客店 /a/'+shop+'，默认利润率 '+ratePct(r)+'%，赊账最高 '+rm(cm));masterAgents(head,D);
+    all.push({name:n,tail:tl,acct:acct,shop:shop,rate:r,rateMin:mn,creditMax:cm,wa:wa,sell:{}});saveAgents(all);
+    toast('已开通：'+acct+'，顾客店 /a/'+shop+'，默认利润率 '+ratePct(r)+'%，赊账最高 '+rm(cm)+'，通知 WhatsApp 已存');masterAgents(head,D);
   };
   function sprev(){var n=document.getElementById('sn').value.trim(),tl=tail4(document.getElementById('snt').value);document.getElementById('spv').innerHTML=n&&tl.length===4?('将开通秘书登录 <b>'+esc(n+tl+'s')+'</b>，入口 /cs'):'请填名字和 4 位尾号'}
   ['sn','snt'].forEach(function(id){document.getElementById(id).addEventListener('input',sprev)});
@@ -402,14 +434,18 @@ function lineVals(o,it,D){ // 统一算出 进价/卖价/抽成（顾客单只�
   return{s:sTot,a:aTot,k:kTot};
 }
 function orderTotals(o,D){var t={qty:0,s:0,a:0,k:0};o.items.forEach(function(it){var v=lineVals(o,it,D);t.qty+=it.qty;t.s+=v.s||0;t.a+=v.a||0;t.k+=v.k||0});return t}
-function donePop(id,wish){var old=document.querySelector('.mdl.okp');if(old)old.remove();var m=document.createElement('div');m.className='mdl okp';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby','okt');m.innerHTML='<div><div class="ok">🎉</div><h3 id="okt">下单已成</h3><div class="oid"><i>单号</i><b>'+esc(id)+'</b></div><p class="pr">为了您的保障，请截图保留单号。</p><p class="wish">'+esc(wish)+'</p><button class="btn gd" type="button">我已截图</button></div>';m.querySelector('button').onclick=function(){m.remove()};document.body.appendChild(m);m.querySelector('button').focus()}
+function donePop(id,wish,o){var old=document.querySelector('.mdl.okp');if(old)old.remove();var m=document.createElement('div');m.className='mdl okp';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-labelledby','okt');m.innerHTML='<div><div class="ok">🎉</div><h3 id="okt">下单已成</h3><div class="oid"><i>单号</i><b>'+esc(id)+'</b></div><p class="pr">为了您的保障，请截图保留单号。</p><p class="wish">'+esc(wish)+'</p>'+(o&&isCust(o)?waActs(o):'')+'<button class="btn gd" type="button" id="okok">我已截图</button></div>';m.querySelector('#okok').onclick=function(){m.remove()};document.body.appendChild(m);m.querySelector('#okok').focus()}
 function shipTxt(c){if(c.ship==='agent')return '<b class="shm">🛵 代理送货</b>';if(c.ship==='post')return '<b class="shm">📮 邮寄</b> · '+esc(c.addr);return esc(c.addr||'')}
-function shipNote(paid){return '<span class="'+(paid?'muted':'shipnote')+'" style="font-size:12.5px">'+(paid?'已安排出货':'已安排出货 · 尚未收款（赊账）')+'</span>'}
+function shipNote(paid,o){if(isCust(o))return '<span class="muted" style="font-size:12.5px">已安排出货</span>';return '<span class="'+(paid?'muted':'shipnote')+'" style="font-size:12.5px">'+(paid?'已安排出货':'已安排出货 · 尚未收款（赊账）')+'</span>'}
 function orderCard(o,view,D){
   var src=o.kind==='agent'?'<span class="kind">自己订货</span>':'<span class="kind">顾客下单</span>';
   var who=o.kind==='agent'?'代理 '+esc(o.agentAcct):'顾客 '+esc(o.cust.user)+' · 经代理 '+esc(o.shop);
   var t=settleOf(o,D),showCost=view!=='cust',paid=isPaid(o,D),partial=!paid&&t.paid>0;
-  var paySt=view==='cust'?'':('<span class="st '+(paid?'s2':'sp')+'">'+(paid?'已付款':(partial?'部分付款':'未付款'))+'</span>');
+  var paySt='';
+  if(view!=='cust'){
+    if(isCust(o))paySt='<span class="st '+(isCustPaid(o)?'s2':'sp')+'">'+(isCustPaid(o)?'顾客已付款':'顾客未付款')+'</span><span class="st '+(paid?'s2':'sp')+'">'+(paid?'已交总盘':(partial?'部分交总盘':'欠总盘'))+'</span>';
+    else paySt='<span class="st '+(paid?'s2':'sp')+'">'+(paid?'已付款':(partial?'部分付款':'未付款'))+'</span>';
+  }
   var chkSt=(isCust(o)&&view!=='cust')?'<span class="st '+(agentChecked(o)?'s2':'s0')+'">'+chkLabel(o)+'</span>':'';
   var packSt=(view!=='cust'&&isPacked(o))?'<span class="st s2">已备货</span>':'';
   var shipSt=view==='cust'?('<span class="st '+(o.status===ST2?'s2':agentChecked(o)?'s1':'s0')+'">'+esc(custSt(o))+'</span>'):('<span class="st '+stc(o.status)+'">'+esc(shipLabel(o))+'</span>');
@@ -426,12 +462,17 @@ function orderCard(o,view,D){
     if(!isPacked(o))ops+='<button type="button" data-pack="'+o.id+'">📦 备货</button>';
     if(!isCust(o)&&o.status!==ST1&&o.status!==ST2)ops+='<button type="button" data-st="'+ST1+'" data-id="'+o.id+'">✓ 确定货</button>';
     if(o.status!==ST2)ops+='<button type="button" class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>';
-    else ops+=shipNote(paid);
+    else ops+=shipNote(paid,o);
     h+='<div class="ops">'+ops+'</div>';
     if(view==='master')h+=payBox(o,t,true);
   }
   if(view==='agent'){
-    if(isCust(o))h+='<div class="ops">'+(agentChecked(o)?'':'<button type="button" data-achk="'+o.id+'">✓ 对单</button>')+(o.status!==ST2?'<button type="button" class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>':shipNote(paid))+'</div>';
+    if(isCust(o)){
+      var cop=(agentChecked(o)?'':'<button type="button" data-achk="'+o.id+'">✓ 对单</button>')+(o.status!==ST2?'<button type="button" class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>':shipNote(paid,o));
+      if(!isCustPaid(o))cop+='<button type="button" data-cpaid="'+o.id+'">标记已付款</button><span class="cnote">表示你已向顾客收了款，不等于已交给总盘</span>';
+      else cop+='<button type="button" class="o" data-cunpay="'+o.id+'">取消顾客已付款</button>';
+      h+='<div class="ops">'+cop+'</div>';
+    }
     h+=payBox(o,t,false);
   }
   if(view==='cust')h+='<p class="tip">'+custTip(o)+'</p>';
@@ -513,6 +554,9 @@ function agent(p,q){
     [].forEach.call(app.querySelectorAll('[data-ap]'),function(b){b.onclick=function(){set('ag.period',b.getAttribute('data-ap'));route()}});
     [].forEach.call(app.querySelectorAll('[data-achk]'),function(b){b.onclick=function(){var all=orders();all.forEach(function(o){if(o.id===b.getAttribute('data-achk')&&isCust(o)&&!o.agentChk){o.agentChk=true;(o.log=o.log||[]).push({t:tnow(),s:'代理对单'})}});saveOrders(all);toast('已对单');route()}});
     [].forEach.call(app.querySelectorAll('[data-st]'),function(b){b.onclick=function(){var all=orders();all.forEach(function(o){if(o.id===b.getAttribute('data-id')&&isCust(o)){o.status=b.getAttribute('data-st');(o.log=o.log||[]).push({t:tnow(),s:o.status})}});saveOrders(all);toast('已更新：'+b.getAttribute('data-st'));route()}});
+    [].forEach.call(app.querySelectorAll('[data-cpaid]'),function(b){b.onclick=function(){var all=orders();all.forEach(function(o){if(o.id===b.getAttribute('data-cpaid')&&isCust(o)){o.custPaid=true;(o.log=o.log||[]).push({t:tnow(),s:'已向顾客收款'})}});saveOrders(all);toast('已记：已向顾客收款');route()}});
+    [].forEach.call(app.querySelectorAll('[data-cunpay]'),function(b){b.onclick=function(){if(!confirm('取消「顾客已付款」？这只改向顾客收款的标记，不影响欠总盘。'))return;var all=orders();all.forEach(function(o){if(o.id===b.getAttribute('data-cunpay')&&isCust(o)){o.custPaid=false;(o.log=o.log||[]).push({t:tnow(),s:'取消顾客已付款'})}});saveOrders(all);toast('已取消：顾客未付款');route()}});
+    var awas=document.getElementById('awas');if(awas)awas.onclick=function(){var wa=document.getElementById('awa').value.trim();if(wa&&!parseWa(wa)){toast('通知 WhatsApp 请填马来西亚手机号码（01… 或 60…，9–15 位数字）');return}var all=agents();all.forEach(function(x){if(x.acct===A.acct)x.wa=wa});saveAgents(all);toast(wa?'已保存通知 WhatsApp':'已清空：通知 WhatsApp 有缺');route()};
     var cp=document.getElementById('cpl');if(cp)cp.onclick=function(){var t=document.getElementById('lkf').textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('链接已复制')},function(){toast('请长按复制')})};
   });
 }
@@ -597,6 +641,7 @@ function agentOrders(D,A,f){
   src('自己订货',ro,false)+src('顾客下单',rc,true)+
   '<p class="setsub">已交 '+rm(ra.paid)+' · 还欠公司是欠总盘的进价余额，不是抽成。有缺会标明，不把缺当 0。</p>'+
   '<p class="crline">赊账 '+creditTxt(cr)+'</p>'+
+  '<div class="wabox"><label for="awa">通知 WhatsApp（顾客下单后用来通知你）</label><div class="payform"><input id="awa" inputmode="tel" value="'+esc(A.wa||'')+'" placeholder="还没填，有缺。例：012-345 6789" aria-label="通知 WhatsApp"><button type="button" id="awas">保存</button></div>'+(A.wa?'':'<p class="tip">有缺：还没填通知号码，顾客下单后「发给代理 WhatsApp」会提示未填。</p>')+'</div>'+
   pendH+
   '<div class="act"><div class="seg"><button type="button" onclick="location.hash=\'#/agent/orders?f=all\'" class="'+(f==='all'?'on':'')+'">全部 '+myAll.length+'</button><button type="button" onclick="location.hash=\'#/agent/orders?f=own\'" class="'+(f==='own'?'on':'')+'">自己订货 '+own.length+'</button><button type="button" onclick="location.hash=\'#/agent/orders?f=cust\'" class="'+(f==='cust'?'on':'')+'">顾客下单 '+cu.length+'</button></div></div>'+
   (list.length?list.map(function(o){return orderCard(o,'agent',D)}).join(''):(pend.length?'':'<div class="empty">还没有订单。</div>'))+
@@ -648,9 +693,9 @@ function shop(slug,p,q){
       var c=get(ck,[]);if(!c.length)return;
       var prof=get('prof.'+cs.user,{});prof.name=f.name;prof.phone=f.phone;prof.ship=f.ship;if(f.ship==='post')prof.addr=f.addr;set('prof.'+cs.user,prof);
       var items=c.map(function(l){var x=D.by[l.sku],u=l.mode==='unit';return{sku:l.sku,name:x.name,pk:x.pk,mode:l.mode,qty:l.qty,s:u?x.su:x.s}});
-      var deny=creditDeny(A,costD,items,costD);if(deny){toast(deny);return}
-      var o={id:oid('C'),kind:'cust',shop:A.shop,agentAcct:A.acct,time:tnow(),status:ST0C,paid:false,cust:{user:cs.user,name:f.name,phone:f.phone,ship:f.ship,addr:f.ship==='post'?f.addr:'',memo:f.memo},items:items};
-      var all=orders();all.push(o);saveOrders(all);del(ck);location.hash=base+'/done/'+o.id;donePop(o.id,'祝您购炮愉快，佳节红火，大吉大利！')};
+      var deny=creditDeny(A,costD,items,costD);if(deny){toast('本店暂时无法接单，请联系本店代理。');return}
+      var o={id:oid('C'),kind:'cust',shop:A.shop,agentAcct:A.acct,time:tnow(),status:ST0C,paid:false,custPaid:false,cust:{user:cs.user,name:f.name,phone:f.phone,ship:f.ship,addr:f.ship==='post'?f.addr:'',memo:f.memo},items:items};
+      var all=orders();all.push(o);saveOrders(all);del(ck);location.hash=base+'/done/'+o.id;donePop(o.id,'祝您购炮愉快，佳节红火，大吉大利！',o)};
   });
 }
 function shopPrice(x){return '<div class="row"><span class="pr"><small>RM</small>'+rm(x.s).slice(2)+'</span><span class="pk">/整盒 '+esc(x.pk)+'</span></div>'+(x.su!=null?'<div class="row"><span class="pr" style="font-size:14px"><small>RM</small>'+rm(x.su).slice(2)+'</span><span class="pk">/件 散装</span></div>':'<div class="pk" style="margin-top:2px">此款只按整盒卖</div>')}

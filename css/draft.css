@@ -389,3 +389,19 @@ a.acct:hover,a.acct:active{border-color:#d4a017;border-left-color:#9b1c2c;backgr
 /* 订单卡单号 */
 .oc .h b.ono{font-size:15.5px;color:#2a1614;font-weight:800;margin-right:2px}
 .oc .h b.ono i{font-style:normal;font-size:12px;font-weight:800;color:#9b1c2c;margin-right:4px;letter-spacing:.04em}
+
+/* t53 顾客付款 / WhatsApp 通知 */
+.oc .ops .cnote{display:block;width:100%;font-size:11.5px;color:#8a6f60;margin:4px 0 0;font-weight:600}
+.wabox{margin:8px 0 14px;padding:10px 12px;background:#fff;border:1px solid #ead8c8;border-radius:10px}
+.wabox label{display:block;font-size:13px;font-weight:700;margin:0 0 6px;color:#2a1614}
+.wabox .payform input{flex:1 1 160px}
+.rt input[id^=w]{width:150px;text-align:left}
+.af .bw{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.af .bw input{flex:1;min-width:180px}
+.af .bw button{border:1px solid #9b1c2c;background:#9b1c2c;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-size:14px}
+@media(max-width:520px){.af .bw{flex-direction:column;align-items:stretch}.af .bw input{min-width:0}.af .bw button{width:100%}}
+.okp .wasend{margin:0 0 12px;text-align:left}
+.okp .watip{font-size:12.5px;color:#4a2a24;margin:0 0 8px;font-weight:600}
+.okp .wasend .btn{width:100%;margin:0 0 8px;display:flex;box-sizing:border-box;text-align:center;text-decoration:none}
+.okp .wamiss{margin:0 0 8px;padding:8px 10px;background:#fbf6ee;border:1px dashed #ead8c8;border-radius:8px;font-size:13px;color:#7a5a50}
+.okp .wamiss b{display:block;color:#2a1614;margin-bottom:2px}
