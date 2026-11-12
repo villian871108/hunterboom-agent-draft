@@ -219,3 +219,28 @@ button.rm:hover{text-decoration:underline}
 .lkpage .tip a{color:var(--mut);text-decoration:underline;text-underline-offset:2px}
 
 .top.simple .in{padding-bottom:10px}
+
+/* 交帐与收款 */
+.tot.stt{grid-template-columns:1fr 1fr;margin:0 0 12px}
+.tot.stt div{padding:12px 14px}
+.tot.stt b{font-size:24px}
+.tot .w b,.oc td.w,.at td.w{color:#875a16;font-weight:800}
+.oc td.k{color:#1b7a3a;font-weight:700}
+.paybox{margin:10px 0 0;padding:10px;background:#fbf6ee;border-radius:10px}
+.payform{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.payform input,.payform select{border:1px solid #e0cbb4;border-radius:8px;padding:7px 10px;background:#fff;font:inherit;font-size:14px;min-width:0}
+.payform input[inputmode=decimal],.payform input[id^=pa-]{flex:0 1 110px;width:110px}
+.payform select{flex:0 1 130px}
+.payform input[id^=pn-]{flex:1 1 120px}
+.payform button{border:1px solid #222;background:#222;color:#fff;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:13px;white-space:nowrap}
+.paylog{list-style:none;margin:8px 0 0;padding:0;font-size:12.5px;color:#7a5a50}
+.paylog li{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:4px 0;border-bottom:1px dashed #ead8c8}
+.paylog li:last-child{border-bottom:0}
+.paylog b{margin-left:auto;font-variant-numeric:tabular-nums;color:#2a1614}
+.settle h1{font-size:22px;margin:0 0 10px;color:var(--rd)}
+
+.setrow{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline;padding:9px 2px;border-bottom:1px dashed #ead8c8;font-size:13.5px}
+.setrow b{margin-right:auto;color:#2a1614}
+.setrow .k{color:#1b7a3a;font-weight:700}
+.setrow .w{color:#875a16;font-weight:800}
+.setsub{font-size:13px;color:#7a5a50;margin:8px 0 10px}
