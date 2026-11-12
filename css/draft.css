@@ -368,3 +368,20 @@ a.acct:hover,a.acct:active{border-color:#d4a017;border-left-color:#9b1c2c;backgr
 .hero.ag .ask{border-color:#ffffff55}
 .hero.ag .ask i{color:#7a5a50}
 .hero.ag .pendn{margin-top:10px}
+
+/* 账号详情：主页放在按钮下方、产品列表前，比交帐页更紧凑 */
+.adet{margin:12px 0 8px}
+.adet > h2,.adet .acch h2{font-size:16px;margin:0;color:#2a1614}
+.adet .acch{margin:0 0 8px;align-items:baseline}
+.adet .acch a{color:#9b1c2c;font-weight:700}
+.adet .ask{margin:0}
+.adet .askc{margin:0}
+.adet .ask.sm{grid-template-columns:repeat(3,1fr)}
+.adet .ask.sm > div{padding:8px 8px;border-bottom:0;border-right:1px solid #f0e4d4;text-align:center}
+.adet .ask.sm > div:last-child{border-right:0}
+.adet .ask.sm i{font-size:11.5px}
+.adet .ask.sm b{font-size:16px;margin-top:2px}
+.adet .ask.sm small{display:none}
+.cp.settle .adet > h2{font-size:15px;margin:0 0 8px;color:#2a1614}
+.cp.settle .adet .ask{margin:0 0 14px}
+.cp.settle .adet .ask.sm, .cp.settle .ask{grid-template-columns:none}
