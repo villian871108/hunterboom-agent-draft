@@ -62,7 +62,25 @@ function load(kind){
 
 /* ---------- orders ---------- */
 var ST0A='待客服确认',ST0C='待人工确认出货',ST1='已确认',ST2='安排出货';
-function orders(){return get('orders',[])}
+function isDemoOrder(o){return /^(A|C)-DEMO\d+$/.test(o&&o.id)}
+function hasDemoOrders(list){return (list||[]).some(isDemoOrder)}
+function seedOrders(){
+  var t1='2026-11-12T06:18:00.000Z',t2='2026-11-11T09:32:00.000Z',t3='2026-11-09T04:05:00.000Z',t3p='2026-11-09T06:20:00.000Z',t3s='2026-11-10T02:10:00.000Z';
+  return [
+    {id:'A-DEMO2',kind:'agent',agentAcct:'abc1234a',shop:'abc1234',time:t3,status:ST2,paid:true,paidAt:t3p,memo:'',
+      items:[{sku:'HB011',name:'五万头礼炮',pk:'4/1',mode:'box',qty:1,a:59750,s:83650}],
+      pays:[{id:'P-DEMO1',amount:59750,method:'银行转账',note:'示例收款',t:t3p,by:'小芳0001s'}],
+      log:[{t:t3,s:ST0A},{t:t3s,s:ST2},{t:t3p,s:'收款 RM597.50 · 银行转账'}]},
+    {id:'A-DEMO1',kind:'agent',agentAcct:'阿伟0901a',shop:'阿伟0901',time:t2,status:ST1,paid:false,memo:'',
+      items:[{sku:'HB003',name:'8尺特红(1.0)',pk:'30/1',mode:'box',qty:1,a:43500,s:60900},{sku:'HB001',name:'8尺红炮',pk:'40/1',mode:'unit',qty:10,a:625,s:875}],
+      pays:[],log:[{t:t2,s:ST0A},{t:'2026-11-11T10:05:00.000Z',s:ST1}]},
+    {id:'C-DEMO1',kind:'cust',agentAcct:'阿伟0901a',shop:'阿伟0901',time:t1,status:ST0C,paid:false,
+      cust:{user:'丽芬0123456789',name:'丽芬',phone:'012-345 6789',ship:'agent',addr:'',memo:''},
+      items:[{sku:'HB001',name:'8尺红炮',pk:'40/1',mode:'box',qty:1,s:35000}],
+      pays:[],log:[{t:t1,s:ST0C}]}
+  ];
+}
+function orders(){if(localStorage.getItem(LS+'orders')==null){var L=seedOrders();set('orders',L);return L}return get('orders',[])}
 function saveOrders(o){set('orders',o)}
 function stc(s){return s===ST2?'s2':s===ST1?'s1':'s0'}
 var PAY_M=['现金','银行转账','DuitNow','Touch n Go','支票','其他'];
@@ -111,10 +129,10 @@ function home(){
   app.innerHTML='<div class="land"><h1>Hunter BOOM JOHOR · 总盘与下线代理（草稿）</h1>'+
   '<p>这是给老板看的草稿，入口可在顶部黑条随时切换。数据来自 2026 价目表（253 款），订单只存在这台浏览器（localStorage），不连真实系统。</p>'+
   '<div class="rc">'+
-  '<a href="#/master"><span class="e">📊</span><b>总盘（永）</b>给老板看的是统计、订单、代理名单。<ul><li>统计：总销售、未付款 / 已付款、出货状态、抽成，可按代理分</li><li>订单：确认有货、安排出货；秘书记录收款金额和方式</li><li>代理名单：开下线、设定抽成和利润关卡</li><li>完整价目表放在内部查阅，不放主菜单，以免扰乱老板</li></ul></a>'+
+  '<a href="#/master"><span class="e">📊</span><b>总盘（永）</b>给老板看的是统计、订单、代理名单。<ul><li>统计：总销售、未付款 / 已付款、出货状态、抽成，可按代理分</li><li>订单：确认有货、安排出货；秘书记录收款金额和方式</li><li>代理名单：开下线、设定抽成和默认利润率、最低利润</li><li>完整价目表放在内部查阅，不放主菜单，以免扰乱老板</li></ul></a>'+
   '<a href="#/agent"><span class="e">🧾</span><b>① 代理自己订货</b>登录用户名：<b style="display:inline;font-size:15px">阿伟0901a</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">a</b></li><li>完整产品资料，看本钱价 / 建议售价 / 利润</li><li>向总盘下单；「我的订单」交帐：列出抽成和要收余额</li></ul></a>'+
   '<a href="#/a/阿伟0901"><span class="e">🛍️</span><b>② 顾客下单链接</b>链接：<b style="display:inline;font-size:15px">/a/阿伟0901</b>（没有 a）<ul><li>只显示卖价，看不到总盘、进价、抽成</li><li>顾客登录填 姓名 + 完整电话号码</li><li>下单必填 姓名、完整电话、收货地址，并可选整盒或散装，单挂在阿伟名下</li></ul></a>'+
-  '<a href="#/cs"><span class="e">👩‍💼</span><b>③ 客服（秘书）</b>登录用户名：<b style="display:inline;font-size:15px">小芳0001s</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">s</b>，由总盘开通</li><li>单独入口，只处理订单：确认有货、安排出货、记录收款金额和方式</li><li>看不到开下线、改抽成和价目表</li></ul></a>'+
+  '<a href="#/cs"><span class="e">👩‍💼</span><b>③ 客服（秘书）</b>登录用户名：<b style="display:inline;font-size:15px">小芳0001s</b><ul><li>名字 + 电话尾号 + <b style="display:inline;font-size:13px">s</b>，由总盘开通</li><li>单独入口，一打开就看到下单的货，可确定货、安排出货、记录收款金额和方式</li><li>看不到开下线、改抽成和价目表</li></ul></a>'+
   '</div><div class="rule"><b>价钱规则（按你定的）：</b> 代理进价 = 总盘 × 1.25；卖价 = 代理进价 × 1.40；抽成 = 卖价 − 代理进价（即进价的 40%）。散装：只有包装 N/1 才算，总盘单件 = 箱价 ÷ N，再按同样规则；其他包装散装留空。金额四舍五入到 RM0.01。<br>例：HB001 8尺红炮（40/1）总盘 RM200 → 进价 RM250 · 卖价 RM350 · 抽成 RM100；散装 进价 RM6.25 · 卖价 RM8.75 · 抽成 RM2.50。</div>'+
   '<div class="rule"><b>登录规则：</b> 代理自己订货 = 名字 + 电话尾号 + <code>a</code>（<code>阿伟0901a</code>）。秘书（客服）= 名字 + 电话尾号 + <code>s</code>（<code>小芳0001s</code>），从 <code>/cs</code> 单独登录，只处理订单，由总盘开通。顾客在代理的顾客链接 <code>/a/阿伟0901</code> 登录，须填 姓名和完整电话（例：丽芬，012-345 6789）。草稿里登录不设密码，只为看流程。</div></div>';
 }
@@ -253,14 +271,21 @@ function masterOrders(D,head,asStaff,sel){
     var t=totalsOf(g.list,D);
     h='<a class="back" href="'+base+'">‹ 代理户口</a><div class="acct top"><div class="an"><b>'+esc(A?A.name:g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在代理名单':'')+'</small><span class="ac">'+t.n+' 单</span></div>'+acctTotals(t)+'</div>'+bar+
       (g.list.length?g.list.map(function(o){return orderCard(o,'master',D)}).join(''):'<div class="oc empty">这个筛选下，这个代理没有订单。</div>');
+  }else if(asStaff){
+    var list=all.filter(function(o){return okShip(o)&&okPay(o)});
+    var empty=all.length?'<div class="oc empty">这个筛选下没有订单。</div>':'<div class="oc empty">还没有订单，先到「① 代理自己订货」或「② 顾客下单链接」下一张单，这里会出现货、确定货和安排出货。</div>';
+    h='<div class="acch"><h2>下单的货</h2><span>确定货、安排出货、记收款</span></div>'+bar+
+      (list.length?list.map(function(o){return orderCard(o,'master',D)}).join(''):empty)+
+      (hasDemoOrders(list)?'<p class="ms-note">以上是示例订单，方便看确定货和出货，不是真实生意。重置后会重新出现。</p>':'');
   }else{
     var show=keys.filter(function(k){return (f.ship==='all'&&f.pay==='all')||by[k].list.length});
-    h='<div class="acch"><h2>代理户口</h2><span>点进去看采购明细'+(asStaff?'、记收款':'')+'</span></div>'+bar+
+    h='<div class="acch"><h2>代理户口</h2><span>点进去看采购明细</span></div>'+bar+
       (show.length?show.map(function(k){var g=by[k],L=g.list,t=totalsOf(L,D);
         var so=L.filter(function(o){return o.status!==ST2}).length,sd=L.length-so,pp=L.filter(isP).length,pt=L.filter(function(o){return !isP(o)&&settleOf(o,D).paid>0}).length,pu=L.length-pp-pt;
         return '<a class="acct" href="'+base+'/'+encodeURIComponent(k)+'"><div class="an"><b>'+esc(g.name)+'</b><small>'+esc(g.acct)+(g.gone?' · 已不在名单':'')+'</small><span class="ac">'+t.n+' 单 ›</span></div>'+acctTotals(t)+
           (L.length?'<div class="cn"><span class="'+(so?'x':'')+'">未出货 '+so+'</span><span>已出货 '+sd+'</span><span class="'+(pu?'x':'')+'">未付款 '+pu+'</span>'+(pt?'<span class="x">部分付款 '+pt+'</span>':'')+'<span>已付款 '+pp+'</span></div>':'<div class="cn"><span>还没有订单</span></div>')+'</a>';
-      }).join(''):'<div class="oc empty">这个筛选下没有订单。</div>');
+      }).join(''):'<div class="oc empty">这个筛选下没有订单。</div>')+
+      (hasDemoOrders(all)?'<p class="ms-note">以上是示例订单，方便看确定货和出货，不是真实生意。重置后会重新出现。</p>':'');
   }
   app.innerHTML=head+'<main class="mw">'+h+(asStaff||sel?'':masterFoot('orders'))+'</main>';
   [].forEach.call(app.querySelectorAll('[data-fd]'),function(b){b.onclick=function(){var x=moF();x[b.getAttribute('data-fd')]=b.getAttribute('data-fv');set('mof2',x);route()}});
@@ -302,7 +327,7 @@ function orderCard(o,view,D){
   if(o.kind==='agent'&&o.memo)h+='<div class="note">备注：'+esc(o.memo)+'</div>';
   h+='<table><tr><th>产品</th><th class="r">数量</th>'+(showCost?'<th class="r">进价</th>':'')+'<th class="r">卖价</th>'+(showCost?'<th class="r">抽成</th>':'')+'</tr>'+rows+'</table>';
   h+='<div class="sum"><span>数量 <b>'+t.qty+'</b></span>'+(showCost?'<span>进价 <b>'+rmSum(t.a,t.missA)+'</b></span>':'')+'<span>'+(view==='cust'?'订单金额':'卖价')+' <b style="color:#9b1c2c">'+rmSum(t.s,t.missS)+'</b></span>'+(showCost?'<span>抽成 <b style="color:#1b7a3a">'+rmSum(t.k,t.missK)+'</b></span><span>已交 <b>'+rm(t.paid)+'</b></span><span>要收余额 <b style="color:#875a16">'+rmx(t.bal)+'</b></span>':'')+'</div>';
-  if(view==='master'){h+='<div class="ops">'+(o.status!==ST1&&o.status!==ST2?'<button data-st="'+ST1+'" data-id="'+o.id+'">✓ 已确认有货</button>':'')+(o.status!==ST2?'<button class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>':'<span class="muted" style="font-size:12.5px">已安排出货</span>')+'</div>';h+=payBox(o,t,true)}
+  if(view==='master'){h+='<div class="ops">'+(o.status!==ST1&&o.status!==ST2?'<button data-st="'+ST1+'" data-id="'+o.id+'">✓ 确定货</button>':'')+(o.status!==ST2?'<button class="o" data-st="'+ST2+'" data-id="'+o.id+'">🚚 安排出货</button>':'<span class="muted" style="font-size:12.5px">已安排出货</span>')+'</div>';h+=payBox(o,t,true)}
   if(view==='agent')h+=payBox(o,t,false);
   if(view==='cust')h+='<p class="tip">'+(o.status===ST2?'客服已安排出货。':o.status===ST1?'客服已确认有货，稍后安排出货。':'订单已提交，客服确认货后安排出货。')+'</p>';
   return h+'</div>';
