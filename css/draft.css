@@ -340,3 +340,31 @@ a.acct:hover,a.acct:active{border-color:#d4a017;border-left-color:#9b1c2c;backgr
 .acct .crline,.agt .crline{color:#7a5a50}
 .shipnote{color:#875a16;font-weight:700}
 .crbox .payform input[id=ca]{flex:0 1 140px;width:140px}
+
+/* 待对散单（代理交帐页）与主页提醒 */
+.pend{margin:0 0 16px;padding:10px 10px 4px;background:#fbf6ee;border:1px solid #ead8c8;border-left:4px solid #9b1c2c;border-radius:12px}
+.pend .acch{margin:2px 4px 8px}
+.pendn{margin:12px 0 0}
+.pendn a{display:inline-block;background:#d4a017;color:#3a1a10;font-weight:800;border-radius:14px;padding:7px 14px;font-size:14px}
+
+/* 代理交帐：进货 / 卖出 / 还欠公司 */
+.ask{display:grid;gap:0;background:#fff;border:1px solid #ead8c8;border-radius:14px;overflow:hidden;margin:0 0 14px;color:inherit}
+.askc{display:block;text-decoration:none;color:inherit;margin:12px 0 0}
+.askc .ask{margin:0}
+.ask > div{padding:10px 14px;border-bottom:1px solid #f0e4d4}
+.ask > div:last-child{border-bottom:0}
+.ask i{display:block;font-style:normal;font-size:13px;color:#7a5a50;font-weight:700}
+.ask b{display:block;font-size:26px;font-variant-numeric:tabular-nums;color:#2a1614;line-height:1.25;margin-top:2px}
+.ask small{display:block;font-size:11.5px;color:#8a6f60;margin-top:2px}
+.ask .w b{color:#875a16}
+.ask .s b{color:#9b1c2c}
+.ask .k{background:#fbf6ee}
+.ask .k b{color:#1b7a3a;font-size:20px}
+.ask.sm b{font-size:20px}
+.aper{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}
+.aper button{border:1px solid #e0cbb4;background:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13px;color:#4a2a24}
+.aper button.on{background:#9b1c2c;border-color:#9b1c2c;color:#fff}
+.aper span{font-size:12px;color:#8a6f60}
+.hero.ag .ask{border-color:#ffffff55}
+.hero.ag .ask i{color:#7a5a50}
+.hero.ag .pendn{margin-top:10px}
